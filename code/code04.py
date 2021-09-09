@@ -5,6 +5,13 @@ import matplotlib.pyplot as plt
 import time  # for sleep
 import IPython.display as ipd  # for display and clear_output
 from IPython.display import display, clear_output  # for the following animation
+import os
+import copy
+import signal
+import os
+import numpy as np
+
+
 
 def f(s):
 	return 1 / (1 + np.exp(-s))

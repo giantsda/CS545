@@ -47,7 +47,7 @@
 
 # ## Example Results
 
-# In[1]:
+# In[21]:
 
 
 import numpy as np
@@ -60,7 +60,7 @@ def addOnes(X):
 
 # Add code cells here to define the functions above.  Once these are correctly defined, the following cells should run and produce similar results as those here.
 
-# In[2]:
+# In[22]:
 
 
 def rmse(T, Y, Tstds):
@@ -68,7 +68,7 @@ def rmse(T, Y, Tstds):
         return np.sqrt(np.mean(error ** 2))
 
 
-# In[3]:
+# In[23]:
 
 
 def forward(X, U, V, W):
@@ -79,7 +79,7 @@ def forward(X, U, V, W):
     return Zu, Zv, Y
 
 
-# In[4]:
+# In[24]:
 
 
 def gradient(X, T, Zu, Zv, Y, U, V, W):
@@ -89,7 +89,7 @@ def gradient(X, T, Zu, Zv, Y, U, V, W):
     Dv=Dw@W[1:,:].T*(1-Zv**2)
     grad_wrt_V=-addOnes(Zu).T@Dv
     Du=Dv@V[1:,:].T*(1-Zu**2)
-    grad_wrt_U=-addOnes(X).T@Du
+    grad_wrt_U=-X.T@Du
   
 # 	grad_wrt_W=-addOnes(Zv).T@(T-Y)
 # 	grad_wrt_V=-addOnes(Zu).T@(((T-Y)@W[1:, :].T)*(1-Zv**2))
@@ -99,7 +99,7 @@ def gradient(X, T, Zu, Zv, Y, U, V, W):
     return grad_wrt_U, grad_wrt_V, grad_wrt_W
 
 
-# In[5]:
+# In[25]:
 
 
 def use(X, X_means, X_stds, T_means, T_stds, U, V, W):
@@ -109,7 +109,7 @@ def use(X, X_means, X_stds, T_means, T_stds, U, V, W):
     return Y 
 
 
-# In[6]:
+# In[26]:
 
 
 def train(X, T, n_units_U, n_units_V, n_epochs, rho):
@@ -132,7 +132,7 @@ def train(X, T, n_units_U, n_units_V, n_epochs, rho):
     for epoch in range(n_epochs):
         Zu, Zv, Y=forward(XtrainS1, U, V, W)
 
-        grad_wrt_U, grad_wrt_V, grad_wrt_W=gradient(XtrainS, TtrainS, Zu, Zv, Y, U, V, W)
+        grad_wrt_U, grad_wrt_V, grad_wrt_W=gradient(XtrainS1, TtrainS, Zu, Zv, Y, U, V, W)
 
         # Take step down the gradient
         U = U - rhoI * grad_wrt_U
@@ -144,8 +144,8 @@ def train(X, T, n_units_U, n_units_V, n_epochs, rho):
 #             aaa=111
  
 
-        if epoch%50==0:
-            print(epoch)
+#         if epoch%50==0:
+#             print(epoch)
  
     return U, V, W, Xmeans, Xstds, Tmeans, Tstds
 
@@ -156,7 +156,7 @@ def train(X, T, n_units_U, n_units_V, n_epochs, rho):
 
 
 
-# In[7]:
+# In[27]:
 
 
 Xtrain = np.arange(4).reshape(-1, 1)
@@ -166,7 +166,7 @@ Xtest = Xtrain + 0.5
 Ttest = Xtest ** 2
 
 
-# In[8]:
+# In[28]:
 
 
 U = np.array([[1, 2, 3], [4, 5, 6]])  # 2 x 3 matrix, for 2 inputs (include constant 1) and 3 units
@@ -174,7 +174,7 @@ V = np.array([[-1, 3], [1, 3], [-2, 1], [2, -4]]) # 2 x 3 matrix, for 3 inputs (
 W = np.array([[-1], [2], [3]])  # 3 x 1 matrix, for 3 inputs (include constant 1) and 1 ounit
 
 
-# In[9]:
+# In[29]:
 
 
 X_means = np.mean(Xtrain, axis=0)
@@ -182,7 +182,7 @@ X_stds = np.std(Xtrain, axis=0)
 Xtrain_st = (Xtrain - X_means) / X_stds
 
 
-# In[10]:
+# In[30]:
 
 
 Zu, Zv, Y = forward(addOnes(Xtrain_st), U, V, W)
@@ -191,7 +191,7 @@ print('Zv = ', Zv)
 print('Y = ', Y)
 
 
-# In[11]:
+# In[31]:
 
 
 T_means = np.mean(Ttrain, axis=0)
@@ -203,7 +203,7 @@ print('grad_wrt_V = ', grad_wrt_V)
 print('grad_wrt_W = ', grad_wrt_W)
 
 
-# In[12]:
+# In[32]:
 
 
 Y = use(Xtrain, X_means, X_stds, T_means, T_stds, U, V, W)
@@ -212,7 +212,7 @@ Y
 
 # Here is another example that just shows the final results of training.
 
-# In[13]:
+# In[33]:
 
 
 n = 30
@@ -223,26 +223,26 @@ Xtest = Xtrain + 0.1 * np.random.normal(size=(n, 1))
 Ttest = 0.2 + 0.05 * (Xtest + 10) + 0.4 * np.sin(Xtest + 10) + 0.2 * np.random.normal(size=(n, 1))
 
 
-# In[14]:
+# In[34]:
 
 
 U, V, W, X_means, X_stds, T_means, T_stds = train(Xtrain, Ttrain, 5, 5, 100, 0.01)
 
 
-# In[15]:
+# In[35]:
 
 
 Y = use(Xtrain, X_means, X_stds, T_means, T_stds, U, V, W)
 
 
-# In[16]:
+# In[36]:
 
 
 plt.plot(Xtrain, Ttrain)
 plt.plot(Xtrain, Y);
 
 
-# In[17]:
+# In[18]:
 
 
 U, V, W, X_means, X_stds, T_means, T_stds = train(Xtrain, Ttrain, 5, 5, 100000, 0.1)
@@ -267,7 +267,7 @@ plt.show()
 # 
 # For the grading script to run correctly, you must first name this notebook as 'Lastname-A1.ipynb' with 'Lastname' being your last name, and then save this notebook.
 
-# In[ ]:
+# In[37]:
 
 
 get_ipython().run_line_magic('run', '-i A1grader.py')

@@ -3,6 +3,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import IPython.display as ipd  # for display and clear_output
+import os
+import copy
+import signal
+import os
+import numpy as np
 
 
 # %matplotlib inline
@@ -29,11 +34,11 @@ def gradient(X, T, Zu, Zv, Y, U, V, W):
 	Dv=Dw@W[1:,:].T*(1-Zv**2)
 	grad_wrt_V=-addOnes(Zu).T@Dv
 	Du=Dv@V[1:,:].T*(1-Zu**2)
-	grad_wrt_U=-addOnes(X).T@Du
-  
+	grad_wrt_U=-X.T@Du
+
 # 	grad_wrt_W=-addOnes(Zv).T@(T-Y)
 # 	grad_wrt_V=-addOnes(Zu).T@(((T-Y)@W[1:, :].T)*(1-Zv**2))
-# 	grad_wrt_U=-addOnes(X).T@(((T-Y)@W[1:, :].T)*(1-Zv**2)@V[1:, :].T*(1-Zu**2))
+# 	grad_wrt_U=-X.T@(((T-Y)@W[1:, :].T)*(1-Zv**2)@V[1:, :].T*(1-Zu**2))
  
     
 	return grad_wrt_U, grad_wrt_V, grad_wrt_W
@@ -64,7 +69,7 @@ def train(X, T, n_units_U, n_units_V, n_epochs, rho):
 	for epoch in range(n_epochs):
 		Zu, Zv, Y=forward(XtrainS1, U, V, W)
 		 
-		grad_wrt_U, grad_wrt_V, grad_wrt_W=gradient(XtrainS, TtrainS, Zu, Zv, Y, U, V, W)
+		grad_wrt_U, grad_wrt_V, grad_wrt_W=gradient(XtrainS1, TtrainS, Zu, Zv, Y, U, V, W)
 
 		# Take step down the gradient
 		U = U - rhoI * grad_wrt_U
@@ -91,8 +96,8 @@ def train(X, T, n_units_U, n_units_V, n_epochs, rho):
 
 # 			ipd.display(fig)
 	return U, V, W, Xmeans, Xstds, Tmeans, Tstds
- 
-plt.show()
+
+
 
 Xtrain = np.arange(4).reshape(-1, 1)
 Ttrain = Xtrain ** 2
@@ -141,14 +146,11 @@ Ttest = 0.2 + 0.05 * (Xtest + 10) + 0.4 * np.sin(Xtest + 10) + 0.2 * np.random.n
 # plt.show()
  
 
-U, V, W, X_means, X_stds, T_means, T_stds = train(Xtrain, Ttrain, 5, 5, 100000, 0.1)
+U, V, W, X_means, X_stds, T_means, T_stds = train(Xtrain, Ttrain, 50, 50, 50000, 0.01)
 Y = use(Xtrain, X_means, X_stds, T_means, T_stds, U, V, W)
 plt.plot(Xtrain, Ttrain, label='Train')
 plt.plot(Xtrain, Y, label='Test')
 plt.legend();
 plt.show()
-exit()
-
-
 
 

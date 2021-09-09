@@ -148,7 +148,7 @@ print('''\nTesting
                   [0.24823956],
                   [0.24921478]])
 
-    grad_wrt_U, grad_wrt_V, grad_wrt_W = gradient(X, T, Zu, Zv, Y, U, V, W)
+    grad_wrt_U, grad_wrt_V, grad_wrt_W = gradient(addOnes(X), T, Zu, Zv, Y, U, V, W)
 ''')
 
 
@@ -178,9 +178,11 @@ try:
                   [0.24823956],
                   [0.24921478]])
 
-    grad_wrt_U, grad_wrt_V, grad_wrt_W = gradient(X, T, Zu, Zv, Y, U, V, W)
+    grad_wrt_U, grad_wrt_V, grad_wrt_W = gradient(addOnes(X), T, Zu, Zv, Y, U, V, W)
 
-    grad_wrt_U_answer = np.array([[-0.82940893, 0.53004459]])
+    grad_wrt_U_answer = np.array([[-0.5952239 ,  0.43237751],
+                                  [-0.82940893,  0.53004459]])
+
     grad_wrt_V_answer = np.array([[0.56468907, 1.36302356, 2.35084051],
                           [0.15442332, 0.3882369 , 0.68537352],
                           [0.25698882, 0.63947139, 1.12241063]])
