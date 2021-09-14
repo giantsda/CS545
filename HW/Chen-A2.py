@@ -89,9 +89,9 @@ class NeuralNetwork():
 		
 		self.make_weights_and_views(shapes)
  
-		self.all_gradients = None
-		self.Grads = None
-		self.total_epochs = None
+		self.all_gradients = []
+		self.Grads = []
+		self.total_epochs = 0
 		self.error_trace = []
 		self.X_means = None
 		self.X_stds = None
@@ -177,24 +177,12 @@ class NeuralNetwork():
 		# Call the requested optimizer method to train the weights.
 
 		if method == 'sgd':
-			optimizer.sgd(self.error_f(X,T), self.gradient_f(X,T), n_epochs=100,learning_rate=0.001)
-			a=111
-			
-			
- 
-				 
+			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f)
 		elif method == 'adam':
-
-			a=1
-
+			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f)
 		elif method == 'scg':
-
-			a=1
-
+			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f)
 		else:
-			a=1
-			
-			
 			raise Exception("method must be 'sgd', 'adam', or 'scg'")
  
     
@@ -206,6 +194,9 @@ class NeuralNetwork():
 
 		return self
 
+	def addOnes(self,A):
+		return np.insert(A, 0, 1, axis=1)
+	
 	def _forward(self, X):
 		"""Calculate outputs of each layer given inputs in X
 		
@@ -247,8 +238,13 @@ class NeuralNetwork():
 		self._forward(X)
 		error = (T - self.Ys[-1]) * self.T_stds 
 		self.error_trace.append(error)
-	 
- 
+		summation = 0  #variable to store the summation of differences
+		n = len(error) #finding total number of items in list
+		for i in range (n):  #looping through each element of the list
+			difference = error[i]**2
+			summation +=difference  
+		MSE = summation/n  #dividing summation by total values to obtain average
+		return MSE
 		
 		# Call _forward, calculate mean square error and return it.
 		# ...
@@ -276,31 +272,29 @@ class NeuralNetwork():
 
 		# D is delta matrix to be back propagated
 		D = -(T - self.Ys[-1]) / (n_samples * n_outputs)
-
-
-# 	Dw = T - Y
-# 	grad_wrt_W=-addOnes(Zv).T@Dw
-# 	Dv=Dw@W[1:,:].T*(1-Zv**2)
-# 	grad_wrt_V=-addOnes(Zu).T@Dv
-# 	Du=Dv@V[1:,:].T*(1-Zu**2)
-# 	grad_wrt_U=-X.T@Du
-
-# 	grad_wrt_W=-addOnes(Zv).T@(T-Y)
-# 	grad_wrt_V=-addOnes(Zu).T@(((T-Y)@W[1:, :].T)*(1-Zv**2))
-# 	grad_wrt_U=-X.T@(((T-Y)@W[1:, :].T)*(1-Zv**2)@V[1:, :].T*(1-Zu**2))
- 
-
+		self.Grads =  [None] *n_layers
 
 		# Step backwards through the layers to back-propagate the error (D)
 		for layeri in range(n_layers - 1, -1, -1):
 			# gradient of all but bias weights
-			self.Grads[layeri][1:, :] = -D
-			# gradient of just the bias weights
-			self.Grads[layeri][0:1, :] = np.sum(D, axis=0)
+			
 			# Back-propagate this layer's delta to previous layer
 			if layeri > 0:
-				D = ...
-
+				self.Grads[layeri]= self.addOnes(self.Ys[layeri-n_layers-1]).T@D
+				D =D@self.Ws[layeri-n_layers][1:,:].T*(1-self.Ys[layeri-n_layers-1]**2)  
+			else:
+				self.Grads[layeri]= -self.addOnes(X).T@D
+		
+		self.all_gradients=np.empty([0,1])
+		
+		for layerI in range(n_layers):
+			 
+# 			haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
+			self.all_gradients=np.vstack((self.all_gradients,self.Grads[layerI].reshape(-1,1))) 
+			
+			
+			
+			
 		return self.all_gradients
 
 	def use(self, X):
@@ -316,12 +310,17 @@ class NeuralNetwork():
 		Output of neural network, unstandardized, as numpy array
 		of shape  number of samples  x  number of outputs
 		"""
-
+		X=np.insert(X, 0, 1, axis=1)
+		for layerI in range(len(self.n_hidden_units_by_layers)):
+			X=np.tanh(X @ self.Ws[layerI])
+			self.Ys.append(X)
+			X=np.insert(X, 0, 1, axis=1)
+		Y=X@self.Ws[-1]
+		Y=Y*self.T_stds+self.T_means 
 		# Standardize X
-		# ...
-		
+ 
 		# Unstandardize output Y before returning it
-		return ...
+		return Y
 
 	def get_error_trace(self):
 		"""Returns list of standardized mean square error for each epoch"""
@@ -348,16 +347,16 @@ nnet =NeuralNetwork(X.shape[1], [10, 10], 1)
 for method, rho in method_rhos:
 	nnet = NeuralNetwork(X.shape[1], [10, 10], 1)
 	nnet.train(X, T, 50000, method=method, learning_rate=rho)
-	exit()
 	Y = nnet.use(X)
 	plt.plot(X, Y, 'o-', label='Model ' + method)
 	errors.append(nnet.get_error_trace())
+
 
 plt.plot(X, T, 'o', label='Train')
 plt.xlabel('X')
 plt.ylabel('T or Y')
 plt.legend();
-
+plt.show()
 
 
 
