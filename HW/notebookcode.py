@@ -1,283 +1,135 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # A1: Three-Layer Neural Network
+# # A2: NeuralNetwork Class
 
 # <h1>Table of Contents<span class="tocSkip"></span></h1>
-# <div class="toc"><ul class="toc-item"><li><span><a href="#Requirements" data-toc-modified-id="Requirements-1">Requirements</a></span></li><li><span><a href="#Example-Results" data-toc-modified-id="Example-Results-2">Example Results</a></span></li><li><span><a href="#Discussion" data-toc-modified-id="Discussion-3">Discussion</a></span></li></ul></div>
+# <div class="toc"><ul class="toc-item"><li><span><a href="#Requirements" data-toc-modified-id="Requirements-1">Requirements</a></span></li><li><span><a href="#Code-for-NeuralNetwork-Class" data-toc-modified-id="Code-for-NeuralNetwork-Class-2">Code for <code>NeuralNetwork</code> Class</a></span></li><li><span><a href="#Example-Results" data-toc-modified-id="Example-Results-3">Example Results</a></span></li><li><span><a href="#Application-to-Boston-Housing-Data" data-toc-modified-id="Application-to-Boston-Housing-Data-4">Application to Boston Housing Data</a></span></li></ul></div>
 
 # ## Requirements
 
-# In this assignment, you will start with code from lecture notes 04 and add code to do the following.
+# In this assignment, you will complete the implementation of the `NeuralNetwork` class, starting with the code included in the next code cell.  Your implementation must meet the requirements described in the doc-strings.
 # 
-# * Add another hidden layer, for a total of two hidden layers.  This layer will use a weight matrix named `U`.  Its outputs will be named `Zu` and the outputs of the second hidden layer will be changed to `Zv`.
-# * Define function `forward` that returns the output of all of the layers in the neural network for all samples in `X`. `X` is assumed to be standardized and have the initial column of constant 1 values.
+# Download [optimizers.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/optimizers.tar) and extract `optimizers.py` for use in this assignment.
 # 
-#       def forward(X, U, V, W):
-#           .
-#           .
-#           .
-#           Y = . . . # output of neural network for all rows in X
-#           return Zu, Zv, Y
-#       
-# * Define function `gradient` that returns the gradients of the mean squared error with respect to each of the three weight matrices. `X` and `T` are assumed to be standardized and `X` has the initial column of 1's.
-# 
-#       def gradient(X, T, Zu, Zv, Y, U, V, W):
-#           .
-#           .
-#           .
-#           return grad_wrt_U, grad_wrt_V, grad_wrt_W
-#           
-# * Define function `train` that returns the resulting values of `U`, `V`, and `W` and the standardization parameters.  Arguments are unstandardized `X` and `T`, the number of units in the two hidden layers, the number of epochs and the learning rate, which is the same value for all layers. This function standardizes `X` and `T`, initializes `U`, `V` and `W` to uniformly distributed random values between -1 and 1, and `U`, `V` and `W` for `n_epochs` times as shown in lecture notes 04.  This function must call `forward`, `gradient` and `addOnes`.
-# 
-#       def train(X, T, n_units_U, n_units_V, n_epochs, rho):
-#           .
-#           .
-#           .
-#           return U, V, W, X_means, X_stds, T_means, T_stds
-#           
-# * Define function `use` that accepts unstandardized `X`, standardization parameters, and weight matrices `U`, `V`, and `W` and returns the unstandardized output.
-# 
-#       def use(X, X_means, X_stds, T_means, T_stds, U, V, W):
-#           .
-#           .
-#           .
-#           Y = ....
-#           return Y
+# Then apply your `NeuralNetwork` class to the problem of predicting the value of houses in Boston as described below.
+
+# ## Code for `NeuralNetwork` Class
+
+# In[1]:
+
+
+get_ipython().run_cell_magic('writefile', 'neuralnetwork.py', '\nimport numpy as np\nimport matplotlib.pyplot as plt\n# %matplotlib inline\nimport time  # for sleep\nimport IPython.display as ipd  # for display and clear_output\nfrom IPython.display import display, clear_output  # for the following animation\nimport os\nimport copy\nimport signal\nimport os\nimport numpy as np\nfrom mpl_toolkits.mplot3d import Axes3D\nfrom matplotlib.colors import LightSource\nimport optimizers as opt\n\n\nclass NeuralNetwork():\n    """\n    A class that represents a neural network for nonlinear regression\n\n    Attributes\n    ----------\n    n_inputs : int\n        The number of values in each sample\n    n_hidden_units_by_layers: list of ints, or empty\n        The number of units in each hidden layer.\n        Its length specifies the number of hidden layers.\n    n_outputs: int\n        The number of units in output layer\n    all_weights : one-dimensional numpy array\n        Contains all weights of the network as a vector\n    Ws : list of two-dimensional numpy arrays\n        Contains matrices of weights in each layer,\n        as views into all_weights\n    all_gradients : one-dimensional numpy array\n        Contains all gradients of mean square error with\n        respect to each weight in the network as a vector\n    Grads : list of two-dimensional numpy arrays\n        Contains matrices of gradients weights in each layer,\n        as views into all_gradients\n    total_epochs : int\n        Total number of epochs trained so far\n    error_trace : list\n        Mean square error (standardized) after each epoch\n    X_means : one-dimensional numpy array\n        Means of the components, or features, across samples\n    X_stds : one-dimensional numpy array\n        Standard deviations of the components, or features, across samples\n    T_means : one-dimensional numpy array\n        Means of the components of the targets, across samples\n    T_stds : one-dimensional numpy array\n        Standard deviations of the components of the targets, across samples\n        \n    Methods\n    -------\n    make_weights_and_views(shapes)\n        Creates all initial weights and views for each layer\n\n    train(X, T, n_epochs, method=\'sgd\', learning_rate=None, verbose=True)\n        Trains the network using samples by rows in X and T\n\n    use(X)\n        Applies network to inputs X and returns network\'s output\n    """\n\n    def __init__(self, n_inputs, n_hidden_units_by_layers, n_outputs):\n        """Creates a neural network with the given structure\n        \n        Parameters\n        ----------\n        n_inputs : int\n            The number of values in each sample\n        n_hidden_units_by_layers : list of ints, or empty\n            The number of units in each hidden layer.\n            Its length specifies the number of hidden layers.\n        n_outputs : int\n            The number of units in output layer\n\n        Returns\n        -------\n        NeuralNetwork object\n        """\n        \n        self.n_inputs = n_inputs\n        self.n_inputs = n_inputs =  n_inputs = n_inputs\n        self.n_outputs = n_outputs\n        self.n_hidden_units_by_layers = n_hidden_units_by_layers\n        self.Ws= []\n        self.all_weights=np.empty([0,1])\n        self.shapes=[]\n \n    \n        layer_n=n_inputs\n        for layerI in range(len(self.n_hidden_units_by_layers)):\n            layerI_N=self.n_hidden_units_by_layers[layerI]\n            self.shapes.append([1 + layer_n, layerI_N])\n            layer_n=layerI_N\n        self.shapes.append([1 + layer_n, n_outputs])\n        \n        self.make_weights_and_views(self.shapes)\n        self.all_gradients = []\n        self.Grads = []\n        self.total_epochs = 0\n        self.error_trace = []\n        self.X_means = None\n        self.X_stds = None\n        self.T_means = None\n        self.T_stds = None\n        self.Ys=None\n        \n        # Assign attribute values. Set self.X_means to None to indicate\n        # that standardization parameters have not been calculated.\n        # ....\n  \n\n        # Build list of shapes for weight matrices in each layer\n        # ...\n        \n        # Call make_weights_and_views to create all_weights and Ws\n        # ...\n        \n        # Call make_weights_and_views to create all_gradients and Grads\n        # ...\n\n    def make_weights_and_views(self, shapes):\n        """Creates vector of all weights and views for each layer\n\n        Parameters\n        ----------\n        shapes : list of pairs of ints\n            Each pair is number of rows and columns of weights in each layer\n\n        Returns\n        -------\n        Vector of all weights, and list of views into this vector for each layer\n        """\n\n        for layerI in range(len(shapes)):\n            shapeX=shapes[layerI][0]\n            shapeY=shapes[layerI][1]\n            wI=1 / np.sqrt(shapeX) * np.random.uniform(-1, 1, size=(shapeX, shapeY))\n            self.Ws.append(wI)\n#                       haha=np.vstack((self.all_weights,wI.reshape(-1,1)))\n            self.all_weights=np.vstack((self.all_weights,wI.reshape(-1,1))) \n \n\n        # Create one-dimensional numpy array of all weights with random initial values\n        #  ...\n\n        # Build list of views by reshaping corresponding elements\n        # from vector of all weights into correct shape for each layer.        \n        # ...\n\n    def __repr__(self):\n        return f\'NeuralNetwork({self.n_inputs}, \' + \\\n            f\'{self.n_hidden_units_by_layers}, {self.n_outputs})\'\n\n    def __str__(self):\n        s = self.__repr__()\n        if self.total_epochs > 0:\n            s += f\'\\n Trained for {self.total_epochs} epochs.\'\n            s += f\'\\n Final standardized training error {self.error_trace[-1]:.4g}.\'\n        return s\n \n    def train(self, X, T, n_epochs, method=\'sgd\', learning_rate=None, verbose=True):\n        """Updates the weights \n\n        Parameters\n        ----------\n        X : two-dimensional numpy array\n            number of samples  x  number of input components\n        T : two-dimensional numpy array\n            number of samples  x  number of output components\n        n_epochs : int\n            Number of passes to take through all samples\n        method : str\n            \'sgd\', \'adam\', or \'scg\'\n        learning_rate : float\n            Controls the step size of each update, only for sgd and adam\n        verbose: boolean\n            If True, progress is shown with print statements\n        """\n\n        # Calculate and assign standardization parameters\n        # ...\n\n        # Standardize X and T\n        # ...\n\n        # Instantiate Optimizers object by giving it vector of all weights\n        self.X_means = np.mean(X, axis=0)\n        self.X_stds = np.std(X, axis=0)\n        self.T_means = np.mean(T, axis=0)\n        self.T_stds = np.std(T, axis=0)\n        # Standardize X and T\n\n        X = (X - self.X_means) / self.X_stds\n        T = (T - self.T_means) / self.T_stds\n \n        # Instantiate Optimizers object by giving it vector of all weights\n        optimizer = opt.Optimizers(self.all_weights)\n\n        error_convert_f = lambda err: (np.sqrt(err) * self.T_stds)[0]\n        \n        # Call the requested optimizer method to train the weights.\n\n        if method == \'sgd\':\n            error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs,verbose=True)\n        elif method == \'adam\':\n            error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs)\n        elif method == \'scg\':\n            error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)\n        else:\n            raise Exception("method must be \'sgd\', \'adam\', or \'scg\'")\n \n    \n        self.total_epochs += len(error_trace)\n        self.error_trace += error_trace\n\n\n\n        self._forward(X)\n        error = (T - self.Ys[-1]) * self.T_stds \n  \n        # Return neural network object to allow applying other methods\n        # after training, such as:    Y = nnet.train(X, T, 100, 0.01).use(X)\n\n        return self\n\n    def addOnes(self,A):\n        return np.insert(A, 0, 1, axis=1)\n    \n    def _forward(self, X):\n        """Calculate outputs of each layer given inputs in X\n        \n        Parameters\n        ----------\n        X : input samples, standardized\n\n        Returns\n        -------\n        Outputs of all layers as list\n        """\n        i=0\n        for layerI in range(len(self.shapes)):\n            shapeX=self.shapes[layerI][0]\n            shapeY=self.shapes[layerI][1]\n            self.Ws[layerI]=self.all_weights[i:i+shapeX*shapeY].reshape(shapeX,shapeY)\n            i+=shapeX*shapeY\n        \n        self.Ys=[]\n        for layerI in range(len(self.n_hidden_units_by_layers)):\n            X=np.tanh(self.addOnes(X) @ self.Ws[layerI])\n            self.Ys.append(X)\n        X=self.addOnes(X)@self.Ws[-1]\n        self.Ys.append(X)\n        # Append output of each layer to list in self.Ys, then return it.\n        # ...\n\n    # Function to be minimized by optimizer method, mean squared error\n    def error_f(self, X, T):\n        """Calculate output of net and its mean squared error \n\n        Parameters\n        ----------\n        X : two-dimensional numpy array\n            number of samples  x  number of input components\n        T : two-dimensional numpy array\n            number of samples  x  number of output components\n\n        Returns\n        -------\n        Mean square error as scalar float that is the mean\n        square error over all samples\n        """\n        self._forward(X)\n        error = (T - self.Ys[-1]) * self.T_stds \n        self.error_trace.append(error)\n        summation = 0  #variable to store the summation of differences\n        n = len(error) #finding total number of items in list\n        for i in range (n):  #looping through each element of the list\n            difference = error[i]**2\n            summation +=difference  \n        MSE = summation/n  #dividing summation by total values to obtain average\n \n        return MSE\n    \n        # Call _forward, calculate mean square error and return it.\n        # ...\n\n    # Gradient of function to be minimized for use by optimizer method\n    def gradient_f(self, X, T):\n        """Returns gradient wrt all weights. Assumes _forward already called.\n\n        Parameters\n        ----------\n        X : two-dimensional numpy array\n            number of samples  x  number of input components\n        T : two-dimensional numpy array\n            number of samples  x  number of output components\n\n        Returns\n        -------\n        Vector of gradients of mean square error wrt all weights\n        """\n\n        # Assumes forward_pass just called with layer outputs saved in self.Ys.\n        self._forward( X)\n        # Assumes forward_pass just called with layer outputs saved in self.Ys.\n        n_samples = X.shape[0]\n        n_outputs = T.shape[1]\n        n_layers = len(self.n_hidden_units_by_layers) + 1\n\n        # D is delta matrix to be back propagated\n        D = -(T - self.Ys[-1]) / (n_samples * n_outputs)\n        self.Grads =  [None] *n_layers\n\n        # Step backwards through the layers to back-propagate the error (D)\n        for layeri in range(n_layers - 1, -1, -1):\n            # gradient of all but bias weights\n \n            # Back-propagate this layer\'s delta to previous layer\n            if layeri > 0:\n                self.Grads[layeri]= self.addOnes(self.Ys[layeri-1]).T@D\n                D =D@self.Ws[layeri][1:,:].T*(1-self.Ys[layeri-1]**2)  \n            else:\n                self.Grads[layeri]= -self.addOnes(X).T@D\n         \n        \n        self.all_gradients=np.empty([0,1])\n        \n        for layerI in range(n_layers):          \n            self.all_gradients=np.vstack((self.all_gradients,self.Grads[layerI].reshape(-1,1))) \n            \n            \n            \n            \n        return self.all_gradients\n\n    def use(self, X):\n        """Return the output of the network for input samples as rows in X\n\n        Parameters\n        ----------\n        X : two-dimensional numpy array\n            number of samples  x  number of input components, unstandardized\n\n        Returns\n        -------\n        Output of neural network, unstandardized, as numpy array\n        of shape  number of samples  x  number of outputs\n        """\n        X=(X-self.X_means)/self.X_stds\n        self._forward( X)\n        Y=self.Ys[-1]\n        Y=Y*self.T_stds+self.T_means\n        return Y \n        # Standardize X\n        # ...\n        \n        # Unstandardize output Y before returning it\n        return ...\n\n    def get_error_trace(self):\n        """Returns list of standardized mean square error for each epoch"""\n        return self.error_trace')
+
 
 # ## Example Results
 
-# In[21]:
+# Here we test the `NeuralNetwork` class with some simple data.  
+# 
+
+# In[3]:
 
 
 import numpy as np
 import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
 
-def addOnes(X):
-    return np.insert(X, 0, 1, axis=1)
+import neuralnetwork as nn
+
+X = np.arange(-2, 2, 0.05).reshape(-1, 1)
+T = np.sin(X) * np.sin(X * 10)
+
+errors = []
+n_epochs = 1000
+method_rhos = [('sgd', 0.01),
+               ('adam', 0.005),
+               ('scg', None)]
+
+for method, rho in method_rhos:
+    nnet = nn.NeuralNetwork(X.shape[1], [10, 10], 1)
+    nnet.train(X, T, 50000, method=method, learning_rate=rho)
+    Y = nnet.use(X)
+    plt.plot(X, Y, 'o-', label='Model ' + method)
+    errors.append(nnet.get_error_trace())
+
+plt.plot(X, T, 'o', label='Train')
+plt.xlabel('X')
+plt.ylabel('T or Y')
+plt.legend();
 
 
-# Add code cells here to define the functions above.  Once these are correctly defined, the following cells should run and produce similar results as those here.
-
-# In[22]:
+# In[4]:
 
 
-def rmse(T, Y, Tstds):
-        error = (T - Y) * Tstds 
-        return np.sqrt(np.mean(error ** 2))
+plt.figure(2)
+plt.clf()
+for error_trace in errors:
+    plt.plot(error_trace)
+plt.xlabel('Epoch')
+plt.ylabel('Standardized error')
+plt.legend([mr[0] for mr in method_rhos]);
 
 
-# In[23]:
+# Your results will not be the same, but your code should complete and make plots somewhat similar to these.
+
+# ## Application to Boston Housing Data
+
+# Download data from [Boston House Data at Kaggle](https://www.kaggle.com/fedesoriano/the-boston-houseprice-data). Read it into python using the `pandas.read_csv` function.  Assign the first 13 columns as inputs to `X` and the final column as target values to `T`.  Make sure `T` is two-dimensional.
+
+# Before training your neural networks, partition the data into training and testing partitions, as shown here.
+
+# In[ ]:
 
 
-def forward(X, U, V, W):
-    Zu= np.tanh(X @ U)
-    Zv=np.tanh(addOnes(Zu) @ V)
-    Z1 = addOnes(Zv)
-    Y= Z1 @ W
-    return Zu, Zv, Y
-
-
-# In[24]:
-
-
-def gradient(X, T, Zu, Zv, Y, U, V, W):
- 
-    Dw = T - Y
-    grad_wrt_W=-addOnes(Zv).T@Dw
-    Dv=Dw@W[1:,:].T*(1-Zv**2)
-    grad_wrt_V=-addOnes(Zu).T@Dv
-    Du=Dv@V[1:,:].T*(1-Zu**2)
-    grad_wrt_U=-X.T@Du
-  
-# 	grad_wrt_W=-addOnes(Zv).T@(T-Y)
-# 	grad_wrt_V=-addOnes(Zu).T@(((T-Y)@W[1:, :].T)*(1-Zv**2))
-# 	grad_wrt_U=-addOnes(X).T@(((T-Y)@W[1:, :].T)*(1-Zv**2)@V[1:, :].T*(1-Zu**2))
- 
+def partition(X, T, train_fraction):
+    n_samples = X.shape[0]
+    rows = np.arange(n_samples)
+    np.random.shuffle(rows)
     
-    return grad_wrt_U, grad_wrt_V, grad_wrt_W
-
-
-# In[25]:
-
-
-def use(X, X_means, X_stds, T_means, T_stds, U, V, W):
-    X=(X-X_means)/X_stds
-    Zu, Zv, Y=forward(addOnes(X), U, V, W)
-    Y=Y*T_stds+T_means
-    return Y 
-
-
-# In[26]:
-
-
-def train(X, T, n_units_U, n_units_V, n_epochs, rho):
-    Xmeans = X.mean(axis=0)
-    Xstds = X.std(axis=0)
-    Tmeans = T.mean(axis=0)
-    Tstds = T.std(axis=0)
-    XtrainS = (X - Xmeans) / Xstds
-    TtrainS = (T - Tmeans) / Tstds
-    XtrainS1 = addOnes(XtrainS)
-
-    U = np.random.uniform(-1, 1, size=(XtrainS1.shape[1], n_units_U))  
-    V = np.random.uniform(-1, 1, size=(n_units_U + 1, n_units_V))  
-    W = np.random.uniform(-1, 1, size=(n_units_V+1, TtrainS.shape[1]))  
-
-    rhoI = rho/(T.shape[0]*T.shape[1])
-
-    error=[]
-
-    for epoch in range(n_epochs):
-        Zu, Zv, Y=forward(XtrainS1, U, V, W)
-
-        grad_wrt_U, grad_wrt_V, grad_wrt_W=gradient(XtrainS1, TtrainS, Zu, Zv, Y, U, V, W)
-
-        # Take step down the gradient
-        U = U - rhoI * grad_wrt_U
-        V = V - rhoI * grad_wrt_V  
-        W = W - rhoI * grad_wrt_W  		
-
-        error.append(rmse(TtrainS, Y, Tstds))
-#         if epoch==95:
-#             aaa=111
- 
-
-#         if epoch%50==0:
-#             print(epoch)
- 
-    return U, V, W, Xmeans, Xstds, Tmeans, Tstds
+    n_train = round(n_amples * train_fraction)
+    
+    Xtrain = X[rows[:ntrain], :]
+    Ttrain = T[rows[:ntrain], :]
+    Xtest = X[rows[ntrain:], :]
+    Ttest = T[rows[ntrain:], :]
+    
+def rmse(T, Y):
+    return np.sqrt(np.mean((T - Y)**2))
 
 
 # In[ ]:
 
 
+# Assuming you have assigned `X` and `T` correctly.
+
+Xtrain, Train, Xtest, Ttest = partition(X, T, 0.8)  
 
 
-
-# In[27]:
-
-
-Xtrain = np.arange(4).reshape(-1, 1)
-Ttrain = Xtrain ** 2
-
-Xtest = Xtrain + 0.5
-Ttest = Xtest ** 2
-
-
-# In[28]:
-
-
-U = np.array([[1, 2, 3], [4, 5, 6]])  # 2 x 3 matrix, for 2 inputs (include constant 1) and 3 units
-V = np.array([[-1, 3], [1, 3], [-2, 1], [2, -4]]) # 2 x 3 matrix, for 3 inputs (include constant 1) and 2 units
-W = np.array([[-1], [2], [3]])  # 3 x 1 matrix, for 3 inputs (include constant 1) and 1 ounit
-
-
-# In[29]:
-
-
-X_means = np.mean(Xtrain, axis=0)
-X_stds = np.std(Xtrain, axis=0)
-Xtrain_st = (Xtrain - X_means) / X_stds
-
-
-# In[30]:
-
-
-Zu, Zv, Y = forward(addOnes(Xtrain_st), U, V, W)
-print('Zu = ', Zu)
-print('Zv = ', Zv)
-print('Y = ', Y)
-
-
-# In[31]:
-
-
-T_means = np.mean(Ttrain, axis=0)
-T_stds = np.std(Ttrain, axis=0)
-Ttrain_st = (Ttrain - T_means) / T_stds
-grad_wrt_U, grad_wrt_V, grad_wrt_W = gradient(Xtrain_st, Ttrain_st, Zu, Zv, Y, U, V, W)
-print('grad_wrt_U = ', grad_wrt_U)
-print('grad_wrt_V = ', grad_wrt_V)
-print('grad_wrt_W = ', grad_wrt_W)
-
-
-# In[32]:
-
-
-Y = use(Xtrain, X_means, X_stds, T_means, T_stds, U, V, W)
-Y
-
-
-# Here is another example that just shows the final results of training.
-
-# In[33]:
-
-
-n = 30
-Xtrain = np.linspace(0., 20.0, n).reshape((n, 1)) - 10
-Ttrain = 0.2 + 0.05 * (Xtrain + 10) + 0.4 * np.sin(Xtrain + 10) + 0.2 * np.random.normal(size=(n, 1))
-
-Xtest = Xtrain + 0.1 * np.random.normal(size=(n, 1))
-Ttest = 0.2 + 0.05 * (Xtest + 10) + 0.4 * np.sin(Xtest + 10) + 0.2 * np.random.normal(size=(n, 1))
-
-
-# In[34]:
-
-
-U, V, W, X_means, X_stds, T_means, T_stds = train(Xtrain, Ttrain, 5, 5, 100, 0.01)
-
-
-# In[35]:
-
-
-Y = use(Xtrain, X_means, X_stds, T_means, T_stds, U, V, W)
-
-
-# In[36]:
-
-
-plt.plot(Xtrain, Ttrain)
-plt.plot(Xtrain, Y);
-
-
-# In[18]:
-
-
-U, V, W, X_means, X_stds, T_means, T_stds = train(Xtrain, Ttrain, 5, 5, 100000, 0.1)
-Y = use(Xtrain, X_means, X_stds, T_means, T_stds, U, V, W)
-plt.plot(Xtrain, Ttrain, label='Train')
-plt.plot(Xtrain, Y, label='Test')
-plt.legend();
-plt.show()
-
-
-# ## Discussion
-
-# In this markdown cell, describe what difficulties you encountered in completing this assignment. What parts were easy for you and what parts were hard?
+# Write and run code using your `NeuralNetwork` class to model the Boston housing data. Experiment with all three optimization methods and a variety of neural network structures (numbers of hidden layer and units), learning rates, and numbers of epochs. Show results for at least three different network structures, learning rates, and numbers of epochs for each method.  Show your results using print statements that include the method, network structure, number of epochs, learning rate, and RMSE on training data and RMSE on testing data.
+# 
+# Try to find good values for the RMSE on testing data.  Discuss your results, including how good you think the RMSE values are by considering the range of house values given in the data. 
 
 # # Grading
 # 
-# **A1grader.tar is now available.**
+# <font color='red'>A2grader.tar is coming soon.</font>
 # 
-# Your notebook will be run and graded automatically. Test this grading process by first downloading [A1grader.tar](http://www.cs.colostate.edu/~anderson/cs545/notebooks/A1grader.tar) and extract `A1grader.py` from it. Run the code in the following cell to demonstrate an example grading session.  The remaining 10 points will be based on your discussion of this assignment.
+# Your notebook will be run and graded automatically. Test this grading process by first downloading [A2grader.tar](http://www.cs.colostate.edu/~anderson/cs545/notebooks/A2grader.tar) and extract `A2grader.py` from it. Run the code in the following cell to demonstrate an example grading session.  The remaining 20 points will be based on your discussion of this assignment.
 # 
 # A different, but similar, grading script will be used to grade your checked-in notebook. It will include additional tests. You should design and perform additional tests on all of your functions to be sure they run correctly before checking in your notebook.  
 # 
-# For the grading script to run correctly, you must first name this notebook as 'Lastname-A1.ipynb' with 'Lastname' being your last name, and then save this notebook.
+# For the grading script to run correctly, you must first name this notebook as 'Lastname-A2.ipynb' with 'Lastname' being your last name, and then save this notebook.
 
-# In[37]:
+# In[ ]:
 
 
-get_ipython().run_line_magic('run', '-i A1grader.py')
+get_ipython().run_line_magic('run', '-i A2grader.py')
 
 
 # # Check-In
 # 
 # Do not include this section in your notebook.
 # 
-# Name your notebook ```Lastname-A1.ipynb```.  So, for me it would be ```Anderson-A1.ipynb```.  Submit the file using the ```Assignment 1``` link on [Canvas](https://colostate.instructure.com/courses/131494).
+# Name your notebook ```Lastname-A2.ipynb```.  So, for me it would be ```Anderson-A2.ipynb```.  Submit the file using the ```Assignment 2``` link on [Canvas](https://colostate.instructure.com/courses/131494).
 
 # # Extra Credit
 # 

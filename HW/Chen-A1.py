@@ -99,6 +99,49 @@ def train(X, T, n_units_U, n_units_V, n_epochs, rho):
 
 
 
+n_inputs = 3
+n_hiddens = [10, 20]
+n_outputs = 2
+n_samples = 5
+
+X = np.arange(n_samples * n_inputs).reshape(n_samples, n_inputs) * 0.1
+X_means = np.mean(X, axis=0)
+X_stds = np.std(X, axis=0)
+T_means = np.zeros((n_samples, n_outputs))
+T_stds = np.ones((n_samples, n_outputs))
+
+
+
+shapes=[]
+layer_n=n_inputs
+for layerI in range(2):
+	layerI_N=n_hiddens[layerI]
+	shapes.append([1 + layer_n, layerI_N])
+	layer_n=layerI_N
+shapes.append([1 + layer_n, n_outputs])
+		
+ 
+Ws= [1,1,1]
+i=0
+for layerI in range(len(shapes)):
+	shapeX=shapes[layerI][0]
+	shapeY=shapes[layerI][1]
+	Ws[layerI]=0.1*np.ones((shapeX,shapeY))
+	i+=shapeX*shapeY
+		
+Y = use(X, X_means, X_stds, T_means, T_stds, Ws[0], Ws[1], Ws[2])
+print(Y)
+
+
+
+ 
+
+
+
+
+
+
+
 Xtrain = np.arange(4).reshape(-1, 1)
 Ttrain = Xtrain ** 2
 

@@ -141,7 +141,6 @@ class NeuralNetwork():
  
 	def train(self, X, T, n_epochs, method='sgd', learning_rate=None, verbose=True):
 		"""Updates the weights 
-
 		Parameters
 		----------
 		X : two-dimensional numpy array
@@ -178,9 +177,9 @@ class NeuralNetwork():
 		# Call the requested optimizer method to train the weights.
 
 		if method == 'sgd':
-			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=rho,n_epochs=n_epochs)
+			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs,verbose=True)
 		elif method == 'adam':
-			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=rho,n_epochs=n_epochs)
+			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs)
 		elif method == 'scg':
 			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)
 		else:
@@ -190,6 +189,26 @@ class NeuralNetwork():
 		self.total_epochs += len(error_trace)
 		self.error_trace += error_trace
 
+
+
+		self._forward(X)
+		error = (T - self.Ys[-1]) * self.T_stds 
+		plt.plot(X, self.Ys[-1], 'o-', label='Model ')
+# 		errors.append(nnet.get_error_trace())
+		plt.plot(X, T, '*-', label='Train')
+# 		print(self.all_weights[20])
+# 		plt.plot(self.all_weights, '*-', label='w')
+
+# 		plt.show()
+
+		plt.draw()
+		plt.pause(0.00000001)
+		plt.clf()
+ 
+		
+		
+		
+		
 		# Return neural network object to allow applying other methods
 		# after training, such as:    Y = nnet.train(X, T, 100, 0.01).use(X)
 
@@ -252,15 +271,18 @@ class NeuralNetwork():
 			summation +=difference  
 		MSE = summation/n  #dividing summation by total values to obtain average
 		
-# 		plt.plot(X, self.Ys[-1], 'o-', label='Model ' + method)
+# 		plt.plot(X, self.Ys[-1], 'o-', label='Model ')
 # 		errors.append(nnet.get_error_trace())
 # 		plt.plot(X, T, '*-', label='Train')
-		print(self.all_weights[20])
-		plt.plot(self.all_weights, '*-', label='w')
  
-		plt.show()
-		plt.pause(0.001)
-		clear_output(wait=True)
+# 		plt.plot(self.all_weights, '*-', label='w')
+
+# 		plt.show()
+
+# 		plt.draw()
+# 		plt.pause(0.00000001)
+# 		plt.clf()
+ 
  
 		# Call _forward, calculate mean square error and return it.
 		# ...
@@ -331,18 +353,13 @@ class NeuralNetwork():
 		Output of neural network, unstandardized, as numpy array
 		of shape  number of samples  x  number of outputs
 		"""
-		X=np.insert(X, 0, 1, axis=1)
-		for layerI in range(len(self.n_hidden_units_by_layers)):
-			X=np.tanh(X @ self.Ws[layerI])
-			self.Ys.append(X)
-			X=np.insert(X, 0, 1, axis=1)
-		Y=X@self.Ws[-1]
-		Y=Y*self.T_stds+self.T_means 
-		# Standardize X
  
-		# Unstandardize output Y before returning it
-		return Y
-
+		X=(X-self.X_means)/self.X_stds
+		self._forward( X)
+		Y=self.Ys[-1]
+		Y=Y*self.T_stds+self.T_means
+		return Y 
+ 
 	def get_error_trace(self):
 		"""Returns list of standardized mean square error for each epoch"""
 		return self.error_trace
@@ -351,42 +368,30 @@ class NeuralNetwork():
 
 
 #%% main functions
-
-
 X = np.arange(-2, 2, 0.05).reshape(-1, 1)
 T = np.sin(X) * np.sin(X * 10)
 
 errors = []
 n_epochs = 1000
-method_rhos = [('sgd', 0.5),
+method_rhos = [('sgd', 0.01),
 			   ('adam', 0.005),
 			   ('scg', None)]
 
-nnet =NeuralNetwork(X.shape[1], [10, 10], 1)
- 
- 
 for method, rho in method_rhos:
 	nnet = NeuralNetwork(X.shape[1], [10, 10], 1)
-	nnet.train(X, T, 50000, method=method, learning_rate=rho)
+	nnet.train(X, T, 10, method=method, learning_rate=rho)
 	Y = nnet.use(X)
 	plt.plot(X, Y, 'o-', label='Model ' + method)
+	plt.plot(X, T, 'o', label='Train')
 	errors.append(nnet.get_error_trace())
-	plt.plot(X, T, '*-', label='Train')
-	plt.show()
-	exit()
-	a=111
-
+ 
 
 plt.plot(X, T, 'o', label='Train')
 plt.xlabel('X')
 plt.ylabel('T or Y')
 plt.legend();
-plt.show()
 
 
-
-
-
-
+ 
 
 
