@@ -76,7 +76,9 @@ class Optimizers():
 
 			if callback_f is not None:
 				callback_f(epoch)
-
+			
+			print(f'sgd: Epoch {epoch+1:d} ObjectiveF={error:.5f}')
+			
 			if verbose and ((epoch + 1) % max(1, epochs_per_print) == 0):
 				print(f'sgd: Epoch {epoch+1:d} ObjectiveF={error:.5f}')
 

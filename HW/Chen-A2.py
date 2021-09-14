@@ -69,26 +69,27 @@ class NeuralNetwork():
 	use(X)
 		Applies network to inputs X and returns network's output
 	"""
-
+	global all_gradients 			# have to have a gloabl variable to update all the weights
 	def __init__(self, n_inputs, n_hidden_units_by_layers, n_outputs):
+
+		
 		self.n_inputs = n_inputs
 		self.n_inputs = n_inputs =  n_inputs = n_inputs
 		self.n_outputs = n_outputs
 		self.n_hidden_units_by_layers = n_hidden_units_by_layers
 		self.Ws= []
 		self.all_weights=np.empty([0,1])
-		shapes=[]
-		
+		self.shapes=[]
  
+	
 		layer_n=n_inputs
 		for layerI in range(len(self.n_hidden_units_by_layers)):
 			layerI_N=self.n_hidden_units_by_layers[layerI]
-			shapes.append([1 + layer_n, layerI_N])
+			self.shapes.append([1 + layer_n, layerI_N])
 			layer_n=layerI_N
-		shapes.append([1 + layer_n, n_outputs])
+		self.shapes.append([1 + layer_n, n_outputs])
 		
-		self.make_weights_and_views(shapes)
- 
+		self.make_weights_and_views(self.shapes)
 		self.all_gradients = []
 		self.Grads = []
 		self.total_epochs = 0
@@ -177,11 +178,11 @@ class NeuralNetwork():
 		# Call the requested optimizer method to train the weights.
 
 		if method == 'sgd':
-			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f)
+			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=rho,n_epochs=n_epochs)
 		elif method == 'adam':
-			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f)
+			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=rho,n_epochs=n_epochs)
 		elif method == 'scg':
-			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f)
+			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)
 		else:
 			raise Exception("method must be 'sgd', 'adam', or 'scg'")
  
@@ -208,13 +209,19 @@ class NeuralNetwork():
 		-------
 		Outputs of all layers as list
 		"""
+		# unpack self.all_weights to self.Ws
+		i=0
+		for layerI in range(len(self.shapes)):
+			shapeX=self.shapes[layerI][0]
+			shapeY=self.shapes[layerI][1]
+			self.Ws[layerI]=self.all_weights[i:i+shapeX*shapeY].reshape(shapeX,shapeY)
+			i+=shapeX*shapeY
+		
 		self.Ys=[]
-		X=np.insert(X, 0, 1, axis=1)
 		for layerI in range(len(self.n_hidden_units_by_layers)):
-			X=np.tanh(X @ self.Ws[layerI])
+			X=np.tanh(self.addOnes(X) @ self.Ws[layerI])
 			self.Ys.append(X)
-			X=np.insert(X, 0, 1, axis=1)
-		X=X@self.Ws[-1]
+		X=self.addOnes(X)@self.Ws[-1]
 		self.Ys.append(X)
 		# Append output of each layer to list in self.Ys, then return it.
 		# ...
@@ -244,6 +251,19 @@ class NeuralNetwork():
 			difference = error[i]**2
 			summation +=difference  
 		MSE = summation/n  #dividing summation by total values to obtain average
+		
+# 		plt.plot(X, self.Ys[-1], 'o-', label='Model ' + method)
+# 		errors.append(nnet.get_error_trace())
+# 		plt.plot(X, T, '*-', label='Train')
+		print(self.all_weights[20])
+		plt.plot(self.all_weights, '*-', label='w')
+ 
+		plt.show()
+		plt.pause(0.001)
+		clear_output(wait=True)
+ 
+		# Call _forward, calculate mean square error and return it.
+		# ...
 		return MSE
 		
 		# Call _forward, calculate mean square error and return it.
@@ -264,7 +284,7 @@ class NeuralNetwork():
 		-------
 		Vector of gradients of mean square error wrt all weights
 		"""
-
+		self._forward( X)
 		# Assumes forward_pass just called with layer outputs saved in self.Ys.
 		n_samples = X.shape[0]
 		n_outputs = T.shape[1]
@@ -277,13 +297,14 @@ class NeuralNetwork():
 		# Step backwards through the layers to back-propagate the error (D)
 		for layeri in range(n_layers - 1, -1, -1):
 			# gradient of all but bias weights
-			
+ 
 			# Back-propagate this layer's delta to previous layer
 			if layeri > 0:
-				self.Grads[layeri]= self.addOnes(self.Ys[layeri-n_layers-1]).T@D
-				D =D@self.Ws[layeri-n_layers][1:,:].T*(1-self.Ys[layeri-n_layers-1]**2)  
+				self.Grads[layeri]= self.addOnes(self.Ys[layeri-1]).T@D
+				D =D@self.Ws[layeri][1:,:].T*(1-self.Ys[layeri-1]**2)  
 			else:
 				self.Grads[layeri]= -self.addOnes(X).T@D
+		 
 		
 		self.all_gradients=np.empty([0,1])
 		
@@ -337,7 +358,7 @@ T = np.sin(X) * np.sin(X * 10)
 
 errors = []
 n_epochs = 1000
-method_rhos = [('sgd', 0.01),
+method_rhos = [('sgd', 0.5),
 			   ('adam', 0.005),
 			   ('scg', None)]
 
@@ -350,6 +371,10 @@ for method, rho in method_rhos:
 	Y = nnet.use(X)
 	plt.plot(X, Y, 'o-', label='Model ' + method)
 	errors.append(nnet.get_error_trace())
+	plt.plot(X, T, '*-', label='Train')
+	plt.show()
+	exit()
+	a=111
 
 
 plt.plot(X, T, 'o', label='Train')
