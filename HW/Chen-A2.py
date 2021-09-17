@@ -127,7 +127,10 @@ class NeuralNetwork():
 			self.Ws.append(wI)
 # 			haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
 			self.all_weights=np.vstack((self.all_weights,wI.reshape(-1,1))) 
- 
+		self.all_weights=self.all_weights.flatten();
+			
+			
+			
 	def __repr__(self):
 		return f'NeuralNetwork({self.n_inputs}, ' + \
 			f'{self.n_hidden_units_by_layers}, {self.n_outputs})'
@@ -181,11 +184,10 @@ class NeuralNetwork():
 		elif method == 'adam':
 			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs)
 		elif method == 'scg':
-			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)
+			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],n_epochs=n_epochs)
 		else:
 			raise Exception("method must be 'sgd', 'adam', or 'scg'")
  
-    
 		self.total_epochs += len(error_trace)
 		self.error_trace += error_trace
 
@@ -262,33 +264,14 @@ class NeuralNetwork():
 		square error over all samples
 		"""
 		self._forward(X)
-		error = (T - self.Ys[-1]) * self.T_stds 
-		self.error_trace.append(error)
-		summation = 0  #variable to store the summation of differences
-		n = len(error) #finding total number of items in list
-		for i in range (n):  #looping through each element of the list
-			difference = error[i]**2
-			summation +=difference  
-		MSE = summation/n  #dividing summation by total values to obtain average
+# 		error = (T - self.Ys[-1]) * self.T_stds  # I cannt see why I * T_stds here.
+
+		error = (T - self.Ys[-1])
+
+		MSE= np.mean(error**2)
 		
- 
-# # # 		errors.append(nnet.get_error_trace())
- 
-# # # 		plt.plot(self.all_weights, '*-', label='w')
-
-# # # 		plt.show()
-
-
-		plt.plot(self.Ys[-1], 'o-', label='Model ')
-		plt.plot(T, '*-', label='Train')
-
-		plt.draw()
-		plt.pause(0.00001)
-		plt.clf()
- 
- 
-		# Call _forward, calculate mean square error and return it.
-		# ...
+		self.error_trace.append(MSE)
+		
 		return MSE
 		
 		# Call _forward, calculate mean square error and return it.
@@ -339,6 +322,7 @@ class NeuralNetwork():
 # 			haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
 			self.all_gradients=np.vstack((self.all_gradients,self.Grads[layerI].reshape(-1,1))) 
 			
+		self.all_gradients=self.all_gradients.flatten();
 			
 			
 			
@@ -375,8 +359,9 @@ X = np.arange(-2, 2, 0.05).reshape(-1, 1)
 T = np.sin(X) * np.sin(X * 10)
 
 errors = []
-n_epochs = 10000
+n_epochs = 40
 method_rhos = [ 
+               
                 ('scg', None)]
 
 for method, rho in method_rhos:
