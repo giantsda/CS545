@@ -19,6 +19,8 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import LightSource
 import optimizers as opt
+import pandas  # for reading csv file
+
 
 
 class NeuralNetwork():
@@ -193,17 +195,17 @@ class NeuralNetwork():
 
 		self._forward(X)
 		error = (T - self.Ys[-1]) * self.T_stds 
-		plt.plot(X, self.Ys[-1], 'o-', label='Model ')
+# 		plt.plot(X, self.Ys[-1], 'o-', label='Model ')
 # 		errors.append(nnet.get_error_trace())
-		plt.plot(X, T, '*-', label='Train')
+# 		plt.plot(X, T, '*-', label='Train')
 # 		print(self.all_weights[20])
 # 		plt.plot(self.all_weights, '*-', label='w')
 
 # 		plt.show()
 
-		plt.draw()
-		plt.pause(0.00000001)
-		plt.clf()
+# 		plt.draw()
+# 		plt.pause(0.00000001)
+# 		plt.clf()
  
 		
 		
@@ -271,16 +273,16 @@ class NeuralNetwork():
 			summation +=difference  
 		MSE = summation/n  #dividing summation by total values to obtain average
 		
-# 		plt.plot(X, self.Ys[-1], 'o-', label='Model ')
-# 		errors.append(nnet.get_error_trace())
-# 		plt.plot(X, T, '*-', label='Train')
+# 		plt.plot(self.Ys[-1], 'o-', label='Model ')
+# # 		errors.append(nnet.get_error_trace())
+# 		plt.plot(T, '*-', label='Train')
  
-# 		plt.plot(self.all_weights, '*-', label='w')
+# # 		plt.plot(self.all_weights, '*-', label='w')
 
-# 		plt.show()
+# # 		plt.show()
 
 # 		plt.draw()
-# 		plt.pause(0.00000001)
+# 		plt.pause(0.1)
 # 		plt.clf()
  
  
@@ -368,28 +370,87 @@ class NeuralNetwork():
 
 
 #%% main functions
-X = np.arange(-2, 2, 0.05).reshape(-1, 1)
-T = np.sin(X) * np.sin(X * 10)
+# X = np.arange(-2, 2, 0.05).reshape(-1, 1)
+# T = np.sin(X) * np.sin(X * 10)
+
+# errors = []
+# n_epochs = 1000
+# method_rhos = [('sgd', 0.01),
+# 			   ('adam', 0.005),
+# 			   ('scg', None)]
+
+# for method, rho in method_rhos:
+# 	nnet = NeuralNetwork(X.shape[1], [10, 10], 1)
+# 	nnet.train(X, T, 10, method=method, learning_rate=rho)
+# 	Y = nnet.use(X)
+# 	plt.plot(X, Y, 'o-', label='Model ' + method)
+# 	plt.plot(X, T, 'o', label='Train')
+# 	errors.append(nnet.get_error_trace())
+ 
+
+# plt.plot(X, T, 'o', label='Train')
+# plt.xlabel('X')
+# plt.ylabel('T or Y')
+# plt.legend();
+
+
+#%% Boston House Price
+data = pandas.read_csv('boston.csv', delimiter=',', decimal='.', usecols=range(14), na_values=-200)
+data = data.dropna(axis=0)
+ 
+data=data.to_numpy()
+ 
+X=data[:,0:13]
+T=data[:,-1].reshape(-1,1)
+
+def partition(X, T, train_fraction):
+	n_samples = X.shape[0]
+	rows = np.arange(n_samples)
+	np.random.shuffle(rows)
+	
+	n_train = round(n_samples * train_fraction)
+	
+	Xtrain = X[rows[:n_train], :]
+	Ttrain = T[rows[:n_train], :]
+	Xtest = X[rows[n_train:], :]
+	Ttest = T[rows[n_train:], :]
+	return [Xtrain, Ttrain, Xtest, Ttest]
+def rmse(T, Y):
+	return np.sqrt(np.mean((T - Y)**2))
+
+Xtrain, Ttrain, Xtest, Ttest = partition(X, T, 0.8)  
 
 errors = []
-n_epochs = 1000
-method_rhos = [('sgd', 0.01),
-			   ('adam', 0.005),
+n_epochs = 10000
+method_rhos = [
 			   ('scg', None)]
 
 for method, rho in method_rhos:
-	nnet = NeuralNetwork(X.shape[1], [10, 10], 1)
-	nnet.train(X, T, 10, method=method, learning_rate=rho)
-	Y = nnet.use(X)
-	plt.plot(X, Y, 'o-', label='Model ' + method)
-	plt.plot(X, T, 'o', label='Train')
+	nnet = NeuralNetwork(X.shape[1], [100, 100], 1)
+	nnet.train(Xtrain, Ttrain, n_epochs, method=method, learning_rate=rho)
+	Ytest = nnet.use(Xtest)
+	plt.plot( Ytest, 'o-', label='Model ' + method)
+	plt.plot( Ttest, 'o', label='Train')
 	errors.append(nnet.get_error_trace())
- 
 
-plt.plot(X, T, 'o', label='Train')
-plt.xlabel('X')
-plt.ylabel('T or Y')
-plt.legend();
+
+
+
+
+
+
+
+
+
+[t for t in data['Time'][:10]]
+[t[:2] for t in data['Time'][:10]]
+hour = [int(t[:2]) for t in data['Time']]
+data.columns
+CO = data['CO(GT)']
+CO[:10]
+T = CO
+T = np.array(T).reshape((-1, 1))  # make T have one column and as many rows as needed to hold the values of T
+
 
 
  
