@@ -376,7 +376,7 @@ T = np.sin(X) * np.sin(X * 10)
 
 errors = []
 n_epochs = 10000
-method_rhos = [ ('adam', 0.01),
+method_rhos = [ 
                 ('scg', None)]
 
 for method, rho in method_rhos:
@@ -427,19 +427,18 @@ Xtrain, Ttrain, Xtest, Ttest = partition(X, T, 0.8)
 
 errors = []
 n_epochs = 10000
-method_rhos = [ 
-                ('adam', 0.005),
+method_rhos = [  
                 ('scg', None)]
-
+ 
 for method, rho in method_rhos:
-	nnet = NeuralNetwork(X.shape[1], [100, 100], 1)
-	nnet.train(Xtrain, Ttrain, n_epochs, method=method, learning_rate=rho)
-	Ytest = nnet.use(Xtest)
-	plt.plot( Ytest, 'o-', label='Model ' + method)
-	plt.plot( Ttest, 'o-', label='Train')
-	errors.append(nnet.get_error_trace())
-	plt.show()
-	exit()
+    nnet = nn.NeuralNetwork(X.shape[1], [30, 30], 1)
+    nnet.train(X, T, n_epochs, method=method, learning_rate=rho)
+    Y = nnet.use(X)
+    plt.plot(X, Y, 'o-', label='Model ' + method)
+    plt.plot(X, T, 'o', label='Train')
+    errors.append(nnet.get_error_trace())
+    plt.show()
+    exit()
 
 
  
