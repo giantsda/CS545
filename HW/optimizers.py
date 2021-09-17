@@ -184,7 +184,7 @@ class Optimizers():
 
             # Calculate first and second directional derivatives.
             if success:
-                mu = self.search_dir.T @ self.g_new
+                mu = self.search_dir @ self.g_new
                 if mu >= 0:
                     self.search_dir[:] = - self.g_new
                     mu = self.search_dir.T @ self.g_new
@@ -203,7 +203,7 @@ class Optimizers():
                 self.g_smallstep[:] = gradient_f(*fargs)
                 self.all_weights[:] = self.w_temp
 
-                theta = self.search_dir.T @ (self.g_smallstep - self.g_new) / sigma
+                theta = self.search_dir @ (self.g_smallstep - self.g_new) / sigma
                 if math.isnan(theta):
                     print('theta', theta, 'sigma', sigma, 'search_dir[0]', self.search_dir[0], 'g_smallstep[0]', self.g_smallstep[0]) #, 'gradnew[0]', gradnew[0])
 
@@ -260,7 +260,7 @@ class Optimizers():
                 self.g_new[:] = gradient_f(*fargs)
 
                 # If the gradient is zero then we are done.
-                gg = self.g_new.T @ self.g_new  # dot(gradnew, gradnew)
+                gg = self.g_new @ self.g_new  # dot(gradnew, gradnew)
                 if gg == 0:
                     return error_trace
 
@@ -275,7 +275,7 @@ class Optimizers():
                 self.search_dir[:] = -self.g_new
                 nsuccess = 0
             elif success:
-                gamma = (self.g_old - self.g_new).T @ (self.g_new / mu)
+                gamma = (self.g_old - self.g_new) @ (self.g_new / mu)
                 #self.search_dir[:] = gamma * self.search_dir - self.g_new
                 self.search_dir *= gamma
                 self.search_dir -= self.g_new

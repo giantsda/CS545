@@ -70,13 +70,11 @@ class NeuralNetwork():
 
 	use(X)
 		Applies network to inputs X and returns network's output
-	"""
-	global all_gradients 			# have to have a gloabl variable to update all the weights
+	""" 
 	def __init__(self, n_inputs, n_hidden_units_by_layers, n_outputs):
 
 		
 		self.n_inputs = n_inputs
-		self.n_inputs = n_inputs =  n_inputs = n_inputs
 		self.n_outputs = n_outputs
 		self.n_hidden_units_by_layers = n_hidden_units_by_layers
 		self.Ws= []
@@ -273,17 +271,20 @@ class NeuralNetwork():
 			summation +=difference  
 		MSE = summation/n  #dividing summation by total values to obtain average
 		
-# 		plt.plot(self.Ys[-1], 'o-', label='Model ')
-# # 		errors.append(nnet.get_error_trace())
-# 		plt.plot(T, '*-', label='Train')
  
-# # 		plt.plot(self.all_weights, '*-', label='w')
+# # # 		errors.append(nnet.get_error_trace())
+ 
+# # # 		plt.plot(self.all_weights, '*-', label='w')
 
-# # 		plt.show()
+# # # 		plt.show()
 
-# 		plt.draw()
-# 		plt.pause(0.1)
-# 		plt.clf()
+
+		plt.plot(self.Ys[-1], 'o-', label='Model ')
+		plt.plot(T, '*-', label='Train')
+
+		plt.draw()
+		plt.pause(0.00001)
+		plt.clf()
  
  
 		# Call _forward, calculate mean square error and return it.
@@ -308,6 +309,7 @@ class NeuralNetwork():
 		-------
 		Vector of gradients of mean square error wrt all weights
 		"""
+ 
 		self._forward( X)
 		# Assumes forward_pass just called with layer outputs saved in self.Ys.
 		n_samples = X.shape[0]
@@ -315,7 +317,7 @@ class NeuralNetwork():
 		n_layers = len(self.n_hidden_units_by_layers) + 1
 
 		# D is delta matrix to be back propagated
-		D = -(T - self.Ys[-1]) / (n_samples * n_outputs)
+		D = (T - self.Ys[-1])  
 		self.Grads =  [None] *n_layers
 
 		# Step backwards through the layers to back-propagate the error (D)
@@ -324,7 +326,7 @@ class NeuralNetwork():
  
 			# Back-propagate this layer's delta to previous layer
 			if layeri > 0:
-				self.Grads[layeri]= self.addOnes(self.Ys[layeri-1]).T@D
+				self.Grads[layeri]= -self.addOnes(self.Ys[layeri-1]).T@D
 				D =D@self.Ws[layeri][1:,:].T*(1-self.Ys[layeri-1]**2)  
 			else:
 				self.Grads[layeri]= -self.addOnes(X).T@D
@@ -367,32 +369,35 @@ class NeuralNetwork():
 		return self.error_trace
 
 
-
-
-#%% main functions
-# X = np.arange(-2, 2, 0.05).reshape(-1, 1)
-# T = np.sin(X) * np.sin(X * 10)
-
-# errors = []
-# n_epochs = 1000
-# method_rhos = [('sgd', 0.01),
-# 			   ('adam', 0.005),
-# 			   ('scg', None)]
-
-# for method, rho in method_rhos:
-# 	nnet = NeuralNetwork(X.shape[1], [10, 10], 1)
-# 	nnet.train(X, T, 10, method=method, learning_rate=rho)
-# 	Y = nnet.use(X)
-# 	plt.plot(X, Y, 'o-', label='Model ' + method)
-# 	plt.plot(X, T, 'o', label='Train')
-# 	errors.append(nnet.get_error_trace())
  
+#%% main functions
+X = np.arange(-2, 2, 0.05).reshape(-1, 1)
+T = np.sin(X) * np.sin(X * 10)
 
-# plt.plot(X, T, 'o', label='Train')
-# plt.xlabel('X')
-# plt.ylabel('T or Y')
-# plt.legend();
+errors = []
+n_epochs = 10000
+method_rhos = [ ('adam', 0.01),
+                ('scg', None)]
 
+for method, rho in method_rhos:
+	nnet = NeuralNetwork(X.shape[1], [30, 30], 1)
+	nnet.train(X, T, n_epochs, method=method, learning_rate=rho)
+	Y = nnet.use(X)
+	plt.plot(X, Y, 'o-', label='Model ' + method)
+	plt.plot(X, T, 'o', label='Train')
+	errors.append(nnet.get_error_trace())
+	plt.show()
+	exit()
+
+
+plt.plot(X, T, 'o', label='Train')
+plt.xlabel('X')
+plt.ylabel('T or Y')
+plt.legend();
+
+
+
+exit()
 
 #%% Boston House Price
 data = pandas.read_csv('boston.csv', delimiter=',', decimal='.', usecols=range(14), na_values=-200)
@@ -422,37 +427,19 @@ Xtrain, Ttrain, Xtest, Ttest = partition(X, T, 0.8)
 
 errors = []
 n_epochs = 10000
-method_rhos = [
-			   ('scg', None)]
+method_rhos = [ 
+                ('adam', 0.005),
+                ('scg', None)]
 
 for method, rho in method_rhos:
 	nnet = NeuralNetwork(X.shape[1], [100, 100], 1)
 	nnet.train(Xtrain, Ttrain, n_epochs, method=method, learning_rate=rho)
 	Ytest = nnet.use(Xtest)
 	plt.plot( Ytest, 'o-', label='Model ' + method)
-	plt.plot( Ttest, 'o', label='Train')
+	plt.plot( Ttest, 'o-', label='Train')
 	errors.append(nnet.get_error_trace())
-
-
-
-
-
-
-
-
-
-
-[t for t in data['Time'][:10]]
-[t[:2] for t in data['Time'][:10]]
-hour = [int(t[:2]) for t in data['Time']]
-data.columns
-CO = data['CO(GT)']
-CO[:10]
-T = CO
-T = np.array(T).reshape((-1, 1))  # make T have one column and as many rows as needed to hold the values of T
-
+	plt.show()
+	exit()
 
 
  
-
-
