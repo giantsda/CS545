@@ -127,7 +127,7 @@ class NeuralNetwork():
 			self.Ws.append(wI)
 # 			haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
 			self.all_weights=np.vstack((self.all_weights,wI.reshape(-1,1))) 
-		self.all_weights=self.all_weights.flatten();
+		self.all_weights=self.all_weights.flatten()
 			
 			
 			
@@ -300,7 +300,7 @@ class NeuralNetwork():
 		n_layers = len(self.n_hidden_units_by_layers) + 1
 
 		# D is delta matrix to be back propagated
-		D = (T - self.Ys[-1])  
+		D = (T - self.Ys[-1]) /(n_samples * n_outputs) 
 		self.Grads =  [None] *n_layers
 
 		# Step backwards through the layers to back-propagate the error (D)
@@ -359,8 +359,8 @@ X = np.arange(-2, 2, 0.05).reshape(-1, 1)
 T = np.sin(X) * np.sin(X * 10)
 
 errors = []
-n_epochs = 40
-method_rhos = [ 
+n_epochs = 10000
+method_rhos = [ ('adam',0.01),
                
                 ('scg', None)]
 
@@ -412,7 +412,7 @@ Xtrain, Ttrain, Xtest, Ttest = partition(X, T, 0.8)
 
 errors = []
 n_epochs = 10000
-method_rhos = [  
+method_rhos = [  ('adam',0.01),
                 ('scg', None)]
  
 for method, rho in method_rhos:

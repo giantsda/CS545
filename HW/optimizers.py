@@ -229,7 +229,7 @@ class Optimizers():
 				Delta = 2 * (fnew - fold) / (alpha * mu)
 				
 				
-				print('delta',delta, 'theta', theta, 'alpha', alpha, 'dF',fnew - fold)
+#				print('delta',delta, 'theta', theta, 'alpha', alpha, 'dF',fnew - fold)
 				
 				
 				if not math.isnan(Delta) and Delta  >= 0:
