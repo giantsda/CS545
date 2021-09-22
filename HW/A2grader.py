@@ -82,7 +82,7 @@ print('''\nTesting
     X = np.arange(n_samples * n_inputs).reshape(n_samples, n_inputs) * 0.1
     
     nnet = nn.NeuralNetwork(n_inputs, n_hiddens, n_outputs)
-    nnet.all_weights = 0.1  # set all weights to 0.1
+    nnet.all_weights[:] = 0.1  # set all weights to 0.1
     nnet.X_means = np.mean(X, axis=0)
     nnet.X_stds = np.std(X, axis=0)
     nnet.T_means = np.zeros((n_samples, n_outputs))

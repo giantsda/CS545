@@ -189,7 +189,7 @@ class NeuralNetwork():
 			raise Exception("method must be 'sgd', 'adam', or 'scg'")
  
 		self.total_epochs += len(error_trace)
-		self.error_trace += error_trace
+		self.error_trace = error_trace
 
 
 
@@ -315,8 +315,11 @@ class NeuralNetwork():
 				self.Grads[layeri]= -self.addOnes(X).T@D
 		 
 		
+
+# 		self.all_gradients=
+
+
 		self.all_gradients=np.empty([0,1])
-		
 		for layerI in range(n_layers):
 			 
 # 			haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
@@ -352,37 +355,39 @@ class NeuralNetwork():
 		"""Returns list of standardized mean square error for each epoch"""
 		return self.error_trace
 
-
  
-#%% main functions
-X = np.arange(-2, 2, 0.05).reshape(-1, 1)
-T = np.sin(X) * np.sin(X * 10)
-
-errors = []
-n_epochs = 10000
-method_rhos = [ ('adam',0.01),
-               
-                ('scg', None)]
-
-for method, rho in method_rhos:
-	nnet = NeuralNetwork(X.shape[1], [30, 30], 1)
-	nnet.train(X, T, n_epochs, method=method, learning_rate=rho)
-	Y = nnet.use(X)
-	plt.plot(X, Y, 'o-', label='Model ' + method)
-	plt.plot(X, T, 'o', label='Train')
-	errors.append(nnet.get_error_trace())
-	plt.show()
-	exit()
-
-
-plt.plot(X, T, 'o', label='Train')
-plt.xlabel('X')
-plt.ylabel('T or Y')
-plt.legend();
-
-
-
-exit()
+ 
+# =============================================================================
+# #%% main functions
+# X = np.arange(-2, 2, 0.05).reshape(-1, 1)
+# T = np.sin(X) * np.sin(X * 10)
+# 
+# errors = []
+# n_epochs = 10000
+# method_rhos = [ ('adam',0.01),
+#                
+#                 ('scg', None)]
+# 
+# for method, rho in method_rhos:
+# 	nnet = NeuralNetwork(X.shape[1], [30, 30], 1)
+# 	nnet.train(X, T, n_epochs, method=method, learning_rate=rho)
+# 	Y = nnet.use(X)
+# 	plt.plot(X, Y, 'o-', label='Model ' + method)
+# 	plt.plot(X, T, 'o', label='Train')
+# 	errors.append(nnet.get_error_trace())
+# 	plt.show()
+# 	exit()
+# 
+# 
+# plt.plot(X, T, 'o', label='Train')
+# plt.xlabel('X')
+# plt.ylabel('T or Y')
+# plt.legend();
+# 
+# 
+# 
+# exit()
+# =============================================================================
 
 #%% Boston House Price
 data = pandas.read_csv('boston.csv', delimiter=',', decimal='.', usecols=range(14), na_values=-200)
@@ -411,19 +416,31 @@ def rmse(T, Y):
 Xtrain, Ttrain, Xtest, Ttest = partition(X, T, 0.8)  
 
 errors = []
+layersS=[ [10,10],
+	 [5, 5, 5],
+	 [20,20],
+	 ]
+
 n_epochs = 10000
-method_rhos = [  ('adam',0.01),
-                ('scg', None)]
+method_rhos = [  ('sgd',0.01),
+				('adam',0.01),
+					('scg', None)]
+	 
  
-for method, rho in method_rhos:
-    nnet = nn.NeuralNetwork(X.shape[1], [30, 30], 1)
-    nnet.train(X, T, n_epochs, method=method, learning_rate=rho)
-    Y = nnet.use(X)
-    plt.plot(X, Y, 'o-', label='Model ' + method)
-    plt.plot(X, T, 'o', label='Train')
-    errors.append(nnet.get_error_trace())
-    plt.show()
-    exit()
+
+for i in range(len(layersS)):
+	for j in range (len(method_rhos)):
+		method=method_rhos[j][0]
+		rho=method_rhos[j][1]
+		layer=layersS[i]
+		nnet =NeuralNetwork(X.shape[1], layer,1)
+		nnet.train(X, T, n_epochs, method=method, learning_rate=rho)
+		Y = nnet.use(X)
+		plt.plot(nnet.get_error_trace(), label='Model ' + method)
+	 
+		errors.append(nnet.get_error_trace())
+plt.show()
+		 
 
 
  

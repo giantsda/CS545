@@ -1,27 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Sep 13 09:55:02 2021
 
-@author: chen
-"""
 import numpy as np
-import matplotlib.pyplot as plt
-# %matplotlib inline
-import time  # for sleep
-import IPython.display as ipd  # for display and clear_output
-from IPython.display import display, clear_output  # for the following animation
-import os
-import copy
-import signal
-import os
-import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.colors import LightSource
 import optimizers as opt
-import pandas  # for reading csv file
-
-
-
 
 
 class NeuralNetwork():
@@ -71,9 +50,26 @@ class NeuralNetwork():
 
     use(X)
         Applies network to inputs X and returns network's output
-    """ 
-    def __init__(self, n_inputs, n_hidden_units_by_layers, n_outputs):
+    """
 
+    def __init__(self, n_inputs, n_hidden_units_by_layers, n_outputs):
+        """Creates a neural network with the given structure
+
+        Parameters
+        ----------
+        n_inputs : int
+            The number of values in each sample
+        n_hidden_units_by_layers : list of ints, or empty
+            The number of units in each hidden layer.
+            Its length specifies the number of hidden layers.
+        n_outputs : int
+            The number of units in output layer
+
+        Returns
+        -------
+        NeuralNetwork object
+        """
+ 
         
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -113,13 +109,6 @@ class NeuralNetwork():
         -------
         Vector of all weights, and list of views into this vector for each layer
         """
-
-        # Create one-dimensional numpy array of all weights with random initial values
-        #  ...
-
-        # Build list of views by reshaping corresponding elements
-        # from vector of all weights into correct shape for each layer.        
-        # ...
  
         for layerI in range(len(shapes)):
             shapeX=shapes[layerI][0]
@@ -128,7 +117,14 @@ class NeuralNetwork():
             self.Ws.append(wI)
 #           haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
             self.all_weights=np.vstack((self.all_weights,wI.reshape(-1,1))) 
- 
+        self.all_weights=self.all_weights.flatten()
+        # Create one-dimensional numpy array of all weights with random initial values
+        #  ...
+
+        # Build list of views by reshaping corresponding elements
+        # from vector of all weights into correct shape for each layer.        
+        # ...
+
     def __repr__(self):
         return f'NeuralNetwork({self.n_inputs}, ' + \
             f'{self.n_hidden_units_by_layers}, {self.n_outputs})'
@@ -142,6 +138,7 @@ class NeuralNetwork():
  
     def train(self, X, T, n_epochs, method='sgd', learning_rate=None, verbose=True):
         """Updates the weights 
+
         Parameters
         ----------
         X : two-dimensional numpy array
@@ -160,7 +157,11 @@ class NeuralNetwork():
 
         # Calculate and assign standardization parameters
         # ...
-        
+
+        # Standardize X and T
+        # ...
+
+        # Instantiate Optimizers object by giving it vector of all weights
         self.X_means = np.mean(X, axis=0)
         self.X_stds = np.std(X, axis=0)
         self.T_means = np.mean(T, axis=0)
@@ -182,13 +183,12 @@ class NeuralNetwork():
         elif method == 'adam':
             error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs)
         elif method == 'scg':
-            error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)
+            error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],n_epochs=n_epochs)
         else:
             raise Exception("method must be 'sgd', 'adam', or 'scg'")
  
-    
         self.total_epochs += len(error_trace)
-        self.error_trace += error_trace
+        self.error_trace = error_trace
 
 
 
@@ -206,15 +206,7 @@ class NeuralNetwork():
 #       plt.pause(0.00000001)
 #       plt.clf()
  
-        
-        
-        
-        
-        # Return neural network object to allow applying other methods
-        # after training, such as:    Y = nnet.train(X, T, 100, 0.01).use(X)
-
         return self
-
     def addOnes(self,A):
         return np.insert(A, 0, 1, axis=1)
     
@@ -229,7 +221,7 @@ class NeuralNetwork():
         -------
         Outputs of all layers as list
         """
-        # unpack self.all_weights to self.Ws
+        self.Ys = [X]
         i=0
         for layerI in range(len(self.shapes)):
             shapeX=self.shapes[layerI][0]
@@ -263,35 +255,14 @@ class NeuralNetwork():
         square error over all samples
         """
         self._forward(X)
-        error = (T - self.Ys[-1]) * self.T_stds 
-        self.error_trace.append(error)
-        summation = 0  #variable to store the summation of differences
-        n = len(error) #finding total number of items in list
-        for i in range (n):  #looping through each element of the list
-            difference = error[i]**2
-            summation +=difference  
-        MSE = summation/n  #dividing summation by total values to obtain average
         
- 
-# # #       errors.append(nnet.get_error_trace())
- 
-# # #       plt.plot(self.all_weights, '*-', label='w')
+        error = (T - self.Ys[-1])
 
-# # #       plt.show()
-
-
-#         plt.plot(self.Ys[-1], 'o-', label='Model ')
-#         plt.plot(T, '*-', label='Train')
-
-#         plt.draw()
-#         plt.pause(0.00001)
-#         plt.clf()
- 
- 
-        # Call _forward, calculate mean square error and return it.
-        # ...
+        MSE= np.mean(error**2)
+        
+        self.error_trace.append(MSE)
+        
         return MSE
-        
         # Call _forward, calculate mean square error and return it.
         # ...
 
@@ -310,7 +281,7 @@ class NeuralNetwork():
         -------
         Vector of gradients of mean square error wrt all weights
         """
- 
+
         self._forward( X)
         # Assumes forward_pass just called with layer outputs saved in self.Ys.
         n_samples = X.shape[0]
@@ -318,7 +289,7 @@ class NeuralNetwork():
         n_layers = len(self.n_hidden_units_by_layers) + 1
 
         # D is delta matrix to be back propagated
-        D = (T - self.Ys[-1])  
+        D = (T - self.Ys[-1]) /(n_samples * n_outputs) 
         self.Grads =  [None] *n_layers
 
         # Step backwards through the layers to back-propagate the error (D)
@@ -333,17 +304,22 @@ class NeuralNetwork():
                 self.Grads[layeri]= -self.addOnes(X).T@D
          
         
+
+#       self.all_gradients=
+
+
         self.all_gradients=np.empty([0,1])
-        
         for layerI in range(n_layers):
              
 #           haha=np.vstack((self.all_weights,wI.reshape(-1,1)))
             self.all_gradients=np.vstack((self.all_gradients,self.Grads[layerI].reshape(-1,1))) 
             
+        self.all_gradients=self.all_gradients.flatten();
             
             
             
         return self.all_gradients
+
 
     def use(self, X):
         """Return the output of the network for input samples as rows in X
@@ -358,13 +334,13 @@ class NeuralNetwork():
         Output of neural network, unstandardized, as numpy array
         of shape  number of samples  x  number of outputs
         """
- 
+
         X=(X-self.X_means)/self.X_stds
         self._forward( X)
         Y=self.Ys[-1]
         Y=Y*self.T_stds+self.T_means
         return Y 
- 
+
     def get_error_trace(self):
         """Returns list of standardized mean square error for each epoch"""
         return self.error_trace
