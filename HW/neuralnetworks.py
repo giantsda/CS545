@@ -1,7 +1,7 @@
 import numpy as np
 import optimizers as opt
 import sys  # for sys.float_info.epsilon
- 
+import pandas
 import matplotlib.pyplot as plt
 # %matplotlib inline
 import time  # for sleep
@@ -50,6 +50,8 @@ class NeuralNetwork():
 		self.X_stds = None
 		self.T_means = None
 		self.T_stds = None
+		self.inputClassesLabel=None # save the input calss label, input T may be something like 3,5,88
+
 
 	def _make_weights_and_views(self, shapes):
 		'''
@@ -204,12 +206,15 @@ class NeuralNetwork():
 	def get_error_trace(self):
 		return self.error_trace
 
+#%% NeuralNetworkClassifier
 class NeuralNetworkClassifier(NeuralNetwork):
 
 	def makeIndicatorVars(self, T):
 		# Make sure T is two-dimensional. Should be nSamples x 1.
 		if T.ndim == 1:
 			T = T.reshape((-1, 1))    
+		self.inputClassesLabel=np.unique(T)
+		
 		return (T == np.unique(T)).astype(int)
 
 	def train(self, X, T, n_epochs, method='sgd', learning_rate=None, verbose=True):
@@ -227,6 +232,7 @@ class NeuralNetworkClassifier(NeuralNetwork):
 		# Setup standardization parameters
 		
 		T_save=T.copy()   # save before destorying T
+		self.largestClass=np.argmax(T)
 		
 		T = self.makeIndicatorVars(T)
 		
@@ -283,13 +289,15 @@ class NeuralNetworkClassifier(NeuralNetwork):
 		# after training, such as:    Y = nnet.train(X, T, 100, 0.01).use(X)
 
 		return self
-    
+ 
 	def _neg_log_likelihood_f(self, X, T):
 		Y=self._forward(X)
 		YLastLayer=Y[-1] # after forward X, we got the last layer of Y and ready to calculate LL(x)
 		gs = self._softmax(YLastLayer) # gs=exp(Y@W)/rowSum(exp(Y@)W) See material 08
 # 		LL = np.exp(-np.sum(T * np.log(gs)) / X.shape[0])
-		LL=- np.mean(T * np.log(gs))
+# 		print(gs)
+# 		print(np.log(gs))
+		LL=- np.mean(T * np.log(gs+sys.float_info.epsilon))
 		return LL
  
 	
@@ -309,9 +317,9 @@ class NeuralNetworkClassifier(NeuralNetwork):
 		YLastLayer= self._forward(X)[-1]
 		Ys = self._softmax(YLastLayer)
 
-		predictedTrain = np.argmax(Ys,axis=1)
-		
-		return predictedTrain,Ys
+		predictedClass = np.argmax(Ys,axis=1)
+		predictedClass=self.inputClassesLabel[predictedClass].reshape(-1,1)
+		return predictedClass,Ys
 
 
 	def _gradient_f(self, X, T):
@@ -323,13 +331,19 @@ class NeuralNetworkClassifier(NeuralNetwork):
 		self._backpropagate(D)
 		return self.all_gradients
 
+	def __str__(self):
+		s = self.__repr__()
+		if self.total_epochs > 0:
+			s += f'\n Trained for {self.total_epochs} epochs.'
+			s += f'\n Final standardized training error {self.error_trace[-1]:.4g}.'
+		return s
 
 
 
-#%% test function
-
+#%% test function 1
 
 # =============================================================================
+# 
 # import neuralnetworks as nn
 # 
 # n = 500
@@ -381,8 +395,196 @@ class NeuralNetworkClassifier(NeuralNetwork):
 #     plt.plot(X[mask, 0], X[mask, 1], 'o', markersize=6,  alpha=0.5,  color=colors[c-1])
 # 
 # plt.subplot(2, 2, 4)
-# plt.contourf(Xtest[:, 0].reshape((40, 40)), Xtest[:, 1].reshape((40, 40)),  predTest.reshape((40, 40))+1, 
+# plt.contourf(Xtest[:, 0].reshape((40, 40)), Xtest[:, 1].reshape((40, 40)),  predTest.reshape((40, 40)), 
 #              levels = [0.5, 1.99, 2.01, 3.5],  #    levels=(0.5, 1.5, 2.5, 3.5), 
 #              colors=colors);
 # plt.show()
 # =============================================================================
+
+
+
+
+#%% test function 2
+
+
+# =============================================================================
+# import neuralnetworks as nn
+# 
+# X = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
+# T = np.array([[0], [1], [1], [0]])
+# np.random.seed(111)
+# nnet = nn.NeuralNetworkClassifier(2, [10], 2)
+# nnet.Ws
+# import sys 
+# nnet.train(X, T, n_epochs=1, method='sgd', learning_rate=0.01)
+# 
+# np.random.seed(111)
+# nnet = nn.NeuralNetworkClassifier(2, [10], 2)
+# 
+# nnet.train(X, T, 100, method='scg')
+# 
+# 
+# 
+#  
+# nnet.use(X)
+# 
+# 
+# 
+# def percent_correct(Y, T):
+# 	    return np.mean(T == Y) * 100
+# 
+# percent_correct(nnet.use(X)[0], T)
+# 
+# 
+# nnet = nn.NeuralNetworkClassifier(2, [], 2)
+# nnet.train(X, T, 100, method='scg')
+# nnet.use(X)
+# 
+# 
+# import pandas
+# 
+# def confusion_matrix(Y_classes, T):
+# 	class_names = np.unique(T)
+# 	table = []
+# 	for true_class in class_names:
+# 		row = []
+# 		for Y_class in class_names:
+# 			row.append(100 * np.mean(Y_classes[T == true_class] == Y_class))
+# 		table.append(row)
+# 	conf_matrix = pandas.DataFrame(table, index=class_names, columns=class_names)
+# 	# cf.style.background_gradient(cmap='Blues').format("{:.1f} %")
+# 	print('Percent Correct')
+# 	return conf_matrix.style.background_gradient(cmap='Blues').format("{:.1f}")
+# 
+# confusion_matrix(nnet.use(X)[0], T)
+# 
+# =============================================================================
+
+
+
+
+#%% test function 3
+
+# =============================================================================
+# 
+# import pickle
+# import gzip
+# 
+# 
+# # !curl -O https://www.cs.colostate.edu/~anderson/cs545/notebooks/mnist.pkl.gz
+# 
+# 
+# import neuralnetworks as nn
+# 
+# with gzip.open('../code/mnist.pkl.gz', 'rb') as f:
+#     train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
+# 
+# 
+# def draw_image(image, label):
+#     plt.imshow(-image.reshape(28, 28), cmap='gray')
+#     plt.xticks([])
+#     plt.yticks([])
+#     plt.axis('off')
+#     plt.title(label)
+# 
+# 
+# N=500
+# Xtrain = train_set[0][:N]
+# Ttrain = train_set[1][:N].reshape(-1, 1)
+# 
+# Xval = valid_set[0][:N]
+# Tval = valid_set[1][:N].reshape(-1, 1)
+# 
+# Xtest = test_set[0][:N]
+# Ttest = test_set[1][:N].reshape(-1, 1)
+# 
+# print(Xtrain.shape, Ttrain.shape,  Xval.shape, Tval.shape,  Xtest.shape, Ttest.shape)
+# 
+# def percent_correct(Y, T):
+#     return np.mean(T == Y) * 100
+# 
+# 
+# def confusion_matrix(Y_classes, T):
+#     class_names = np.unique(T)
+#     table = []
+#     for true_class in class_names:
+#         row = []
+#         for Y_class in class_names:
+#             row.append(100 * np.mean(Y_classes[T == true_class] == Y_class))
+#         table.append(row)
+#     conf_matrix = pandas.DataFrame(table, index=class_names, columns=class_names)
+#     # cf.style.background_gradient(cmap='Blues').format("{:.1f} %")
+#     print('Percent Correct')
+#     return conf_matrix
+# 
+# epochsS=[20, 40, 60, 80,100 ,120]
+# hiddensS=[[],[20, 20],[5,5,5,5],[2,2,2,2,2],[10],[30],[10,15]]
+# learning_rateS=[0.01, 0.05, 0.02,0.04,0.005]
+# methods = [ 'scg', 'adam', 'sgd']
+# 
+# BestAccuracy= -1000
+# BestConfiguration=[]
+# 
+# for i in range(100):
+#     epochs=epochsS[np.random.randint(len(epochsS))]
+#     hiddens=hiddensS[np.random.randint(len(hiddensS))]
+#     learning_rate=learning_rateS[np.random.randint(len(learning_rateS))]
+#     method=methods[np.random.randint(len(methods))]
+#     n_classes = len(np.unique(Ttrain))
+#     nnet = nn.NeuralNetworkClassifier(Xtrain.shape[1], hiddens, n_classes)
+#     if method == 'scg':
+#         nnet.train(Xtrain, Ttrain, epochs, method, verbose=False)
+#     else:
+#         nnet.train(Xtrain, Ttrain, epochs, method, learning_rate, verbose=False)
+# #   conf_matrix=confusion_matrix(nnet.use(Xtest)[0], Ttest)
+# #   conf_matrix = conf_matrix.round(2)
+# #   print(conf_matrix)
+#     accuracy=percent_correct(nnet.use(Xtest)[0], Ttest)
+#     print(i, end = ': ')
+#     print([method, hiddens,learning_rate,epochs],end = ';    ')
+#     print(accuracy)
+#     if (accuracy>BestAccuracy):
+#         BestAccuracy=accuracy
+#         BestConfiguration=[method, hiddens,learning_rate,epochs]
+# 
+# print("---------------------------------------------")
+# print(BestAccuracy)
+# print(BestConfiguration)
+# 
+# [method, hiddens,learning_rate,epochs]=BestConfiguration
+# 
+# 
+# n_classes = len(np.unique(Ttrain))
+# nnet = nn.NeuralNetworkClassifier(Xtrain.shape[1], hiddens, n_classes)
+# if method == 'scg':
+#     nnet.train(Xtrain, Ttrain, epochs, method, verbose=False)
+# else:
+#     nnet.train(Xtrain, Ttrain, epochs, method, learning_rate, verbose=False)
+# 
+# accuracy=percent_correct(nnet.use(Xtest)[0], Ttest)
+# print(accuracy)
+# conf_matrix=confusion_matrix(nnet.use(Xtest)[0], Ttest)
+# conf_matrix = conf_matrix.round(2)
+# print(conf_matrix)
+# 
+# plt.figure()
+# plt.plot(nnet.get_error_trace())
+# plt.xlabel('Iteration')
+# plt.ylabel('Data Likelihood');
+# plt.show()
+# 
+# =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+

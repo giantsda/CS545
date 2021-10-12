@@ -214,7 +214,7 @@ import optimizers
 
 # =============================================================================
 # Same thing using Adam instead of SGD, However, it defines the error that is used
-by SGD
+# by SGD
 # =============================================================================
 
 def runParkLogReg2(X, T, n_folds):
