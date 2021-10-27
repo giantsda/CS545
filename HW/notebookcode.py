@@ -2,479 +2,437 @@
 # coding: utf-8
 
 # <h1>Table of Contents<span class="tocSkip"></span></h1>
-# <div class="toc"><ul class="toc-item"><li><span><a href="#Neural-Network-Classifier" data-toc-modified-id="Neural-Network-Classifier-1">Neural Network Classifier</a></span></li><li><span><a href="#Apply-NeuralNetworkClassifier-to-Handwritten-Digits" data-toc-modified-id="Apply-NeuralNetworkClassifier-to-Handwritten-Digits-2">Apply <code>NeuralNetworkClassifier</code> to Handwritten Digits</a></span></li><li><span><a href="#Experiments" data-toc-modified-id="Experiments-3">Experiments</a></span></li><li><span><a href="#Grading" data-toc-modified-id="Grading-4">Grading</a></span></li><li><span><a href="#Extra-Credit" data-toc-modified-id="Extra-Credit-5">Extra Credit</a></span></li></ul></div>
+# <div class="toc"><ul class="toc-item"><li><span><a href="#Convolutional-Neural-Networks" data-toc-modified-id="Convolutional-Neural-Networks-1">Convolutional Neural Networks</a></span><ul class="toc-item"><li><span><a href="#Requirements" data-toc-modified-id="Requirements-1.1">Requirements</a></span></li></ul></li><li><span><a href="#Experiments" data-toc-modified-id="Experiments-2">Experiments</a></span></li><li><span><a href="#Grading" data-toc-modified-id="Grading-3">Grading</a></span></li><li><span><a href="#Extra-Credit" data-toc-modified-id="Extra-Credit-4">Extra Credit</a></span></li></ul></div>
 
-# # Neural Network Classifier
+# # Convolutional Neural Networks
 # 
-# You may start with your `NeuralNetwork` class from A2, or start with the [implementation defined here](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A2solution.tar) in which all functions meant be called by other functions in this class start with an underscore character. Implement the subclass `NeuralNetworkClassifier` that extends `NeuralNetwork` as discussed in class.  Your `NeuralNetworkClassifier` implementation should rely on inheriting functions from `NeuralNetwork` as much as possible. 
-# 
-# Your `neuralnetworks.py` file (notice it is plural) will now contain two classes, `NeuralNetwork` and `NeuralNetworkClassifier`.
-# 
-# In `NeuralNetworkClassifier` replace the `error_f` function with one called `_neg_log_likelihood_f` and pass it instead of `error_f` into the optimization functions.
+# For this assignment, use the `NeuralNetworkClassifier_CNN` class defined for you in `neuralnetworks_A4.py` contained in [A4code.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A4code.tar).  This tar file also includes other functions you will use here, contained in `mlfuncs.py`.
 
-# Here are some example tests.
-
-# In[30]:
+# In[100]:
 
 
 get_ipython().run_line_magic('load_ext', 'autoreload')
 get_ipython().run_line_magic('autoreload', '2')
 
 
-# In[31]:
+# In[101]:
 
 
 import numpy as np
-import neuralnetworks as nn
 import matplotlib.pyplot as plt
-get_ipython().run_line_magic('matplotlib', 'notebook')
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+import neuralnetworks_A4 as nn
+import mlfuncs
 
 
-# In[32]:
+# ## Requirements
+
+# First, look carefully at the `neuralnetworks_A4.py` and `optimizers.py` code provided above.  Some changes have been made in each. The most significant change is that the `train` function now accepts a `batch_size` argument so that the gradients we calculate don't have to be over the whole training set.  Recall that we can easily run out of memory with convolutional networks if we calculate gradients over the whole training set.  Also, `'scg'` is not a valid optimizer in this version of the code.
+# 
+# Implement the following functions:
+# 
+#     dataframe_result = run_these_parameters(X, T, n_folds,
+#                                             layers_structs, 
+#                                             methods, 
+#                                             epochs, 
+#                                             learning_rates.
+#                                             batch_sizes)
+#                                               
+#     result = train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest,
+#                                   struct,
+#                                   n_epochs, 
+#                                   method, 
+#                                   learning_rate,
+#                                   batch_size)
+#                                   
+# The file `mlfuncs.py` contains several functions you will need to define these two required functions.  They are illustrated in the following examples.
+
+# In[102]:
 
 
-X = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
-T = np.array([[0], [1], [1], [0]])
+Y = np.array([0, 1, 1, 0, 0]).reshape(-1, 1)
+T = np.array([0, 1, 0, 1, 0]).reshape(-1, 1)
+mlfuncs.percent_equal(Y, T)
+
+
+# The purpose of that one is obvious.  This next one is needed for storing your network stucture in a pandas DataFrame.  The structure must be an immutable data type.  A list is mutable, but a tuple is not.  So we must make sure all parts of the network structure specification is composed of tuples, not lists.
+
+# In[103]:
+
+
+struct = [ [], [10]]
+mlfuncs.list_to_tuple(struct)
+
+
+# In[104]:
+
+
+struct = [ [[2, 4, 1], [5, 4, 2]], [20, 10]]
+mlfuncs.list_to_tuple(struct)
+
+
+# And here is a function that generates all training, validation, and testing partitions given the data and the number of folds.  It creates the partitions in a stratified manner, meaning all folds will have close to the same proportion of samples from each class.
+
+# In[105]:
+
+
+X = np.arange(12).reshape(6, 2)
+T = np.array([0, 0, 1, 0, 1, 1]).reshape(-1, 1)
 X, T
 
 
-# In[33]:
+# In[106]:
 
 
-np.random.seed(111)
-nnet = nn.NeuralNetworkClassifier(2, [10], 2)
+for Xtrain, Ttrain, Xval, Tval, Xtest, Ttest in mlfuncs.generate_partitions(X, T, n_folds=3, classification=True):
+        print(Xtrain, '\n', Ttrain, '\n', Xval, '\n', Tval, '\n', Xtest, '\n', Ttest)
+        print()
 
 
-# In[34]:
-
-
-print(nnet)
-
-
-# In[35]:
-
-
-nnet.Ws
-
-
-# The `softmax` function can produce errors if the denominator is close to zero.  Here is an implentation you may use to avoid some of those errors.  This assumes you have the following import in your `neuralnetworks.py` file.
+# The function `run_these_parameters` loops through all values in `layers_structs`, `methods`, `epochs`, `learning rates` and `batch_sizes`.  For each set of parameter values, it loops through all ways of creating training, validation, and testing partitions using `n_folds`.  For each of these repetitions, `train_this_partition` is called to create the specified convolutional neural network, trains it, collects the percent correct on training, validation, and test sets, and returns a list of parameter values and the three accuracies.  `run_these_parameters` returns all of these results as a `pandas` DataFrame with column names `('struct', 'method', 'n_epochs', 'learning_rate', 'batch_size', 'train %', 'val %', 'test %')`. 
 # 
-# `sys.float_info.epsilon` is also useful in your `_neg_log_likehood_f` function to avoid taking the `log` of zero.
-
-# In[36]:
-
-
-import sys  # for sys.float_info.epsilon 
-
-
-# In[37]:
-
-
-def _softmax(self, Y):
-    '''Apply to final layer weighted sum outputs'''
-    # Trick to avoid overflow
-    maxY = Y.max()       
-    expY = np.exp(Y - maxY)
-    denom = expY.sum(1).reshape((-1, 1))
-    Y = expY / (denom + sys.float_info.epsilon)
-    return Y
-
-
-# Replace the `error_f` function with `neg_log_likelihood`.  If you add some print statements in `_neg_log_likelihood` functions, you can compare your output to the following results.
-
-# In[38]:
-
-
-nnet.train(X, T, n_epochs=1, method='sgd', learning_rate=0.01)
-
-
-# In[39]:
-
-
-print(nnet)
-
-
-# Now if you comment out those print statements, you can run for more epochs without tons of output.
-
-# In[40]:
-
-
-np.random.seed(111)
-nnet = nn.NeuralNetworkClassifier(2, [10], 2)
-
-
-# In[41]:
-
-
-nnet.train(X, T, 100, method='scg')
-
-
-# The `use()` function returns two `numpy` arrays. The first one are the class predictions for eachs sample, containing values from the set of unique values in `T` passed into the `train()` function.
+# The resulting DataFrame results stored in variable `df` can be summarized with a statement like
 # 
-# The second value are the probabilities of each class for each sample. This should a column for each unique value in `T`.
+#       df.groupby(['struct', 'method', 'n_epochs', 'learning_rate',
+#                   'batch_size']).mean())
 
-# In[42]:
-
-
-nnet.use(X)
-
-
-# In[43]:
-
-
-def percent_correct(Y, T):
-    return np.mean(T == Y) * 100
-
-
-# In[44]:
-
-
-percent_correct(nnet.use(X)[0], T)
-
-
-# Works!  The XOR problem was used early in the history of neural networks as a problem that cannot be solved with a linear model.  Let's try it.  It turns out our neural network code can do this if we use an empty list for the hidden unit structure!
-
-# In[45]:
-
-
-nnet = nn.NeuralNetworkClassifier(2, [], 2)
-nnet.train(X, T, 100, method='scg')
-
-
-# In[46]:
-
-
-nnet.use(X)
-
-
-# In[47]:
-
-
-percent_correct(nnet.use(X)[0], T)
-
-
-# A second way to evaluate a classifier is to calculate a confusion matrix. This shows the percent accuracy for each class, and also shows which classes are predicted in error.
+# Define the two required functions in code cells above this cell.
 # 
-# Here is a function you can use to show a confusion matrix.
+# The following examples show examples of how they should run, as
 
-# In[64]:
-
-
-import pandas
-
-def confusion_matrix(Y_classes, T):
-    class_names = np.unique(T)
-    table = []
-    for true_class in class_names:
-        row = []
-        for Y_class in class_names:
-            row.append(100 * np.mean(Y_classes[T == true_class] == Y_class))
-        table.append(row)
-    conf_matrix = pandas.DataFrame(table, index=class_names, columns=class_names)
-    # cf.style.background_gradient(cmap='Blues').format("{:.1f} %")
-    print('Percent Correct')
-    return conf_matrix.style.background_gradient(cmap='Blues').format("{:.1f}")
+# In[107]:
 
 
-# In[65]:
+def make_images(n_each_class):
+    '''Make 20x20 black and white images with diamonds or squares for the two classes, as line drawings.'''
+    images = np.zeros((n_each_class * 4, 20, 20))  # nSamples, rows, columns
+    radii = 3 + np.random.randint(10 - 5, size=(n_each_class * 4, 1))
+    centers = np.zeros((n_each_class * 4, 2))
+    for i in range(n_each_class * 4):
+        r = radii[i, 0]
+        centers[i, :] = r + 1 + np.random.randint(18 - 2 * r, size=(1, 2))
+        x = int(centers[i, 0])
+        y = int(centers[i, 1])
+        if i < n_each_class:
+            # plus
+            images[i, x - r:x + r, y] = 1.0
+            images[i, x, y - r:y + r] = 1.0
+        elif i < n_each_class * 2:
+            # minus
+            images[i, x, y - r:y + r] = 1.0
+        elif i < n_each_class * 3:
+            # x
+            images[i, range(x - r, x + r), range(y - r, y + r)] = 1.0
+            images[i, range(x - r, x + r), range(y + r, y - r, -1)] = 1.0
+        else:
+            # /
+            images[i, range(x - r, x + r), range(y - r, y + r)] = 1.0
 
+    T = np.array(['plus'] * n_each_class + ['minus'] * n_each_class + ['times'] * n_each_class + ['divide'] * n_each_class).reshape(-1, 1)
 
-confusion_matrix(nnet.use(X)[0], T)
+    n, r, c = images.shape
+    images = images.reshape(n, r, c, 1)  # add channel dimsension
+    return images, T
 
-
-# # Apply `NeuralNetworkClassifier` to Handwritten Digits
-
-# Apply your `NeuralNetworkClassifier` to the [MNIST digits dataset](https://www.cs.colostate.edu/~anderson/cs545/notebooks/mnist.pkl.gz).
-
-# In[21]:
-
-
-import pickle
-import gzip
-
-
-# In[22]:
-
-
-with gzip.open('../code/mnist.pkl.gz', 'rb') as f:
-    train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
-
-Xtrain = train_set[0]
-Ttrain = train_set[1].reshape(-1, 1)
-
-Xval = valid_set[0]
-Tval = valid_set[1].reshape(-1, 1)
-
-Xtest = test_set[0]
-Ttest = test_set[1].reshape(-1, 1)
-
-print(Xtrain.shape, Ttrain.shape,  Xval.shape, Tval.shape,  Xtest.shape, Ttest.shape)
-
-
-# In[23]:
-
-
-28*28
-
-
-# In[24]:
-
-
-def draw_image(image, label):
-    plt.imshow(-image.reshape(28, 28), cmap='gray')
-    plt.xticks([])
-    plt.yticks([])
+n_each_class = 10
+X, T = make_images(n_each_class)
+p = 0
+for i in range(4 * n_each_class):
+    p += 1
+    plt.subplot(4, n_each_class, p)
+    plt.imshow(-X[i, :, :, 0], cmap='gray')
     plt.axis('off')
-    plt.title(label)
 
 
-# In[25]:
+# In[108]:
 
 
-plt.figure(figsize=(9, 9))
-for i in range(100):
-#     print(i)
-    plt.subplot(10, 10, i+1)
-    draw_image(Xtrain[i], Ttrain[i,0])
-plt.tight_layout()
+n_each_class = 500
+X, T = make_images(n_each_class)
 
 
-# In[26]:
+# In[109]:
 
 
-nnet = nn.NeuralNetworkClassifier(784, [], 10)
-nnet.train(Xtrain, Ttrain, n_epochs=40, method='scg')
+import pandas as pd
 
 
-# In[27]:
+
+# from A4mysolution import *
+def train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest, struct, n_epochs, method, learning_rate, batch_size):
+    mlfuncs.make_batches(Xtrain, Ttrain, batch_size)
+    nnet_cnn = nn.NeuralNetworkClassifier_CNN([Xtrain.shape[1], Xtrain.shape[2], Xtrain.shape[3]], struct[0], struct[1], np.unique(Ttrain))
+    nnet_cnn.train(Xtrain, Ttrain, n_epochs, method=method, learning_rate=learning_rate, momentum=0.1, batch_size=batch_size, verbose=False)
+    
+    Yval,Y = nnet_cnn.use(Xval)
+    Ytest,Y = nnet_cnn.use(Xtest)
+    Ytrain,Y = nnet_cnn.use(Xtrain)
+    
+    percentageTrain = mlfuncs.percent_equal(Ytrain, Ttrain)
+    percentageVal= mlfuncs.percent_equal(Yval, Tval)
+    percentageTest = mlfuncs.percent_equal(Ytest, Ttest)
+    Restult = []
+#   ('struct', 'method', 'n_epochs', 'learning_rate', 'batch_size', 'train %', 'val %', 'test %').
 
 
-print(nnet)
+    Restult.append(mlfuncs.list_to_tuple(struct))
+    Restult.append(mlfuncs.list_to_tuple(method))
+    Restult.append(mlfuncs.list_to_tuple(n_epochs))
+    Restult.append(mlfuncs.list_to_tuple(learning_rate))
+    Restult.append(mlfuncs.list_to_tuple(batch_size))
+    Restult.append(mlfuncs.list_to_tuple(percentageTrain))
+    Restult.append(mlfuncs.list_to_tuple(percentageVal))
+    Restult.append(mlfuncs.list_to_tuple(percentageTest))
+ 
+    return Restult
 
 
-# In[30]:
+
+def run_these_parameters(X, T, n_folds,
+            structs, 
+            methods, 
+            epochs, 
+            learning_rates,
+            batch_sizes):
+    classes = ['struct', 'method', 'n_epochs', 'learning_rate', 'batch_size', 'train %', 'val %', 'test %']
+    resultData = []
+    for struct in structs:
+        for method in methods:
+            for epoch in epochs:
+                for learning_rate in learning_rates:
+                    for batch_size in batch_sizes:
+#                           +struct, method, epoch, learning_rate, Xtest, batch_size
+                        for Xtrain, Ttrain, Xval, Tval, Xtest, Ttest in mlfuncs.generate_partitions(X, T, n_folds, validation=True,shuffle=True, classification=True):
+#                             print(f'Doing {struct};{method};{epoch};{learning_rate};{batch_size}')
+                            Restult = train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest, struct, epoch, method, learning_rate, batch_size)
+                            resultData.append(Restult)
+
+    table = pd.DataFrame(resultData, columns=classes)
+    return table
 
 
-[percent_correct(nnet.use(X)[0], T) for X, T in zip([Xtrain, Xval, Xtest], [Ttrain, Tval, Ttest])]
+# In[110]:
 
 
-# In[31]:
+struct = [ [[2, 5, 1]], [5] ]
+n_epochs = 10
+method= 'adam'
+learning_rate = 0.01
+batch_size = 10
+
+n_samples = X.shape[0]
+rows = np.arange(n_samples)
+np.random.shuffle(rows)
+ntrain = int(n_samples * 0.8)
+nval = int(n_samples * 0.1)
+Xtrain = X[rows[:ntrain], ...]
+Ttrain = T[rows[:ntrain], ...]
+Xval = X[rows[ntrain:ntrain+nval], ...]
+Tval = T[rows[ntrain:ntrain+nval], ...]
+Xtest = X[rows[ntrain+nval:], ...]
+Ttest = T[rows[ntrain+nval:], ...]
+           
+result = train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest,
+                              struct, n_epochs, method, learning_rate, batch_size)
+result
 
 
-nnet = nn.NeuralNetworkClassifier(784, [20], 10)
-nnet.train(Xtrain, Ttrain, n_epochs=40, method='scg')
+# In[111]:
 
 
-# In[32]:
-
-
-[percent_correct(nnet.use(X)[0], T) for X, T in zip([Xtrain, Xval, Xtest],
-                                                    [Ttrain, Tval, Ttest])]
+# df = run_these_parameters(X, T, n_folds=4,
+#                          structs=[
+#                              [ [], [] ],
+#                              [ [], [10] ],
+#                              [[[5, 3, 1]], []],
+#                              [[[20, 3, 2], [5, 3, 1]], [20]],
+#                             ],
+#                           methods=['adam'], # , 'sgd'],
+#                           epochs=[10],
+#                           learning_rates=[0.01], #, 0.1],
+#                           batch_sizes=[3])
+# df
 
 
 # # Experiments
 # 
-# For each method, try various hidden layer structures, learning rates, and numbers of epochs.  Use the validation percent accuracy to pick the best hidden layers, learning rates and numbers of epochs for each method (ignore learning rates for scg).  Report training, validation and test accuracy for your best validation results for each of the three methods.
+# When you have `train_this_partition` and `run_these_parameters`, use them to explore the parameter values, trying to find combinations of parameter values that result in high validation accuracies.  
 # 
-# Include plots of data likelihood versus epochs, and confusion matrices, for best results for each method.
+# Start with one value for each of the five parameters, but remember to specifiy them as a list of one element, like `learning_rates=[0.01]`.  Then run again with 3 or 4 values for one parameter.  Note the best value.  Use that value for that parameter, then add more values for a different parameter.  
 # 
-# Write at least 10 sentences about what you observe in the likelihood plots, the train, validation and test accuracies, and the confusion matrices.
-
-# # Showing Correctly downloaded and read the MNIST data.
+# Proceed this way for each of the parameter values.  Discuss what you observe after each call to `run_these_parameters` with at least two sentences for each run.  Do the parameter values you find that work best surprise you?  Also discuss how well the validation and test accuracies equal each other.
+# 
+# For each method, try various hidden layer structures, learning rates, and numbers of epochs.  Use the validation percent accuracy to pick the best hidden layers, learning rates and numbers of epochs for each method.  Report training, validation and test accuracy for your best validation results for each of the three methods.
 # 
 
-# In[66]:
+# In[112]:
 
 
-import pickle
-import gzip
-
-get_ipython().system('curl -O https://www.cs.colostate.edu/~anderson/cs545/notebooks/mnist.pkl.gz')
-with gzip.open('../code/mnist.pkl.gz', 'rb') as f:
-    train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
-
-Xtrain = train_set[0]
-Ttrain = train_set[1].reshape(-1, 1)
-
-Xval = valid_set[0]
-Tval = valid_set[1].reshape(-1, 1)
-
-Xtest = test_set[0]
-Ttest = test_set[1].reshape(-1, 1)
-
-print(Xtrain.shape, Ttrain.shape,  Xval.shape, Tval.shape,  Xtest.shape, Ttest.shape) 
- 
+df = run_these_parameters(X, T, n_folds=4,
+                         structs=[
+                             [ [], [] ],
+                             [ [], [10] ],
+                             [[[5, 3, 1]], []],
+                             [[[20, 3, 2], [5, 3, 1]], [20]],
+                            ],
+                          methods=['adam'], # , 'sgd'],
+                          epochs=[10],
+                          learning_rates=[0.01], #, 0.1],
+                          batch_sizes=[3])
+df
 
 
-# In[67]:
+# (((5, 3, 1),), ())	is the best  for structs.
+# The most complex structures does not produces the best results.
+# In most case, result with train set is bette than test set. 
+
+# In[113]:
 
 
-Xtrain
+df = run_these_parameters(X, T, n_folds=4,
+                         structs=[
+                             [[[5, 3, 1]], []],           
+                            ],
+                          methods=['adam' , 'sgd'],
+                          epochs=[10],
+                          learning_rates=[0.01], #, 0.1],
+                          batch_sizes=[3])
+df
 
 
-# In[69]:
+# Results usign sgd and adam are compareable and all of them are acceptable.
+# Sgd performs slightly better than adam
+
+# In[82]:
 
 
-import pickle
-import gzip
+df = run_these_parameters(X, T, n_folds=4,
+                         structs=[
+                             [[[5, 3, 1]], []],           
+                            ],
+                          methods=['sgd'],
+                          epochs=[10,20,30],
+                          learning_rates=[0.01], #, 0.1],
+                          batch_sizes=[3])
+df
 
 
-# !curl -O https://www.cs.colostate.edu/~anderson/cs545/notebooks/mnist.pkl.gz
+# The results using 10,20,30 are comparable with 20 better than others.
+# Probably because the batch size was set too small.
+
+# In[84]:
 
 
-import neuralnetworks as nn
-
-with gzip.open('../code/mnist.pkl.gz', 'rb') as f:
-    train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
-
-
-def draw_image(image, label):
-    plt.imshow(-image.reshape(28, 28), cmap='gray')
-    plt.xticks([])
-    plt.yticks([])
-    plt.axis('off')
-    plt.title(label)
+df = run_these_parameters(X, T, n_folds=4,
+                         structs=[
+                             [[[5, 3, 1]], []],           
+                            ],
+                          methods=['sgd'],
+                          epochs=[20],
+                          learning_rates=[0.01,0.05,0.1], #, 0.1],
+                          batch_sizes=[3])
+df
 
 
-N=500
-Xtrain = train_set[0][:N]
-Ttrain = train_set[1][:N].reshape(-1, 1)
+# df = run_these_parameters(X, T, n_folds=4,
+#                          structs=[
+#                              [[[5, 3, 1]], []],           
+#                             ],
+#                           methods=['sgd'],
+#                           epochs=[20],
+#                           learning_rates=[0.01,0.05,0.1], #, 0.1],
+#                           batch_sizes=[3])
+# df
 
-Xval = valid_set[0][:N]
-Tval = valid_set[1][:N].reshape(-1, 1)
+# With   learning_rates=[0.01,0.05,0.1], the rate=0.01 performance best.
+# 
 
-Xtest = test_set[0][:N]
-Ttest = test_set[1][:N].reshape(-1, 1)
-
-print(Xtrain.shape, Ttrain.shape,  Xval.shape, Tval.shape,  Xtest.shape, Ttest.shape)
-
-def percent_correct(Y, T):
-    return np.mean(T == Y) * 100
-
-
-def confusion_matrix(Y_classes, T):
-    class_names = np.unique(T)
-    table = []
-    for true_class in class_names:
-        row = []
-        for Y_class in class_names:
-            row.append(100 * np.mean(Y_classes[T == true_class] == Y_class))
-        table.append(row)
-    conf_matrix = pandas.DataFrame(table, index=class_names, columns=class_names)
-    # cf.style.background_gradient(cmap='Blues').format("{:.1f} %")
-    print('Percent Correct')
-    return conf_matrix
-
-epochsS=[20, 40, 60, 80,100 ,120]
-hiddensS=[[],[20, 20],[5,5,5,5],[2,2,2,2,2],[10],[30],[10,15]]
-learning_rateS=[0.01, 0.05, 0.02,0.04,0.005]
-methods = [ 'scg', 'adam', 'sgd']
-
-BestAccuracy= -1000
-BestConfiguration=[]
-
-for i in range(100):
-    epochs=epochsS[np.random.randint(len(epochsS))]
-    hiddens=hiddensS[np.random.randint(len(hiddensS))]
-    learning_rate=learning_rateS[np.random.randint(len(learning_rateS))]
-    method=methods[np.random.randint(len(methods))]
-    n_classes = len(np.unique(Ttrain))
-    nnet = nn.NeuralNetworkClassifier(Xtrain.shape[1], hiddens, n_classes)
-    if method == 'scg':
-        nnet.train(Xtrain, Ttrain, epochs, method, verbose=False)
-    else:
-        nnet.train(Xtrain, Ttrain, epochs, method, learning_rate, verbose=False)
-#   conf_matrix=confusion_matrix(nnet.use(Xtest)[0], Ttest)
-#   conf_matrix = conf_matrix.round(2)
-#   print(conf_matrix)
-    accuracy=percent_correct(nnet.use(Xtest)[0], Ttest)
-    print(i, end = ': ')
-    print([method, hiddens,learning_rate,epochs],end = ';    ')
-    print(accuracy)
-    if (accuracy>BestAccuracy):
-        BestAccuracy=accuracy
-        BestConfiguration=[method, hiddens,learning_rate,epochs]
-
-print("---------------------------------------------")
-print(BestAccuracy)
-print(BestConfiguration)
-
-[method, hiddens,learning_rate,epochs]=BestConfiguration
+# In[86]:
 
 
-n_classes = len(np.unique(Ttrain))
-nnet = nn.NeuralNetworkClassifier(Xtrain.shape[1], hiddens, n_classes)
-if method == 'scg':
-    nnet.train(Xtrain, Ttrain, epochs, method, verbose=False)
-else:
-    nnet.train(Xtrain, Ttrain, epochs, method, learning_rate, verbose=False)
-
-accuracy=percent_correct(nnet.use(Xtest)[0], Ttest)
-print(accuracy)
-conf_matrix=confusion_matrix(nnet.use(Xtest)[0], Ttest)
-conf_matrix = conf_matrix.round(2)
-print(conf_matrix)
-
-plt.figure()
-plt.plot(nnet.get_error_trace())
-plt.xlabel('Iteration')
-plt.ylabel('Data Likelihood');
-plt.show()
+df = run_these_parameters(X, T, n_folds=4,
+                         structs=[
+                             [[[5, 3, 1]], []],           
+                            ],
+                          methods=['sgd'],
+                          epochs=[20],
+                          learning_rates=[0.01], #, 0.1],
+                          batch_sizes=[3,5,20,30])
+df
 
 
-# # This is my Discussion:
+# Tried batch_sizes=[3,5,20,30]), and looks like batch size=30 performs best.
+# This is due to when batch size is sufficiently large, the pattern difference between the train set and the test set are reduced. 
 # 
 # 
+# Do the parameter values you find that work best surprise you? Also discuss how well the validation and test accuracies equal each other.
+# 
+# The best parameter values I found out is  "
+#                          structs=[
+#                              [[[5, 3, 1]], []],           
+#                             ],
+#                           methods=['sgd'],
+#                           epochs=[20],
+#                           learning_rates=[0.01], #, 0.1],
+#                           batch_sizes=[30])
+# "
+# It does not surprise me. The validation and test accuracies are acceptablely close to each other.
+
+# df = run_these_parameters(X, T, n_folds=5,
+#                          structs=[
+#                              [ [], [] ],
+#                              [ [], [10] ],
+#                              [[[5, 3, 1]], []],
+#                              [[[20, 3, 2], [5, 3, 1]], [20]], 
+#                             ],
+#                           methods=['sgd','adam'],
+#                           epochs=[30],
+#                           learning_rates=[0.01,0.05,0.1], #, 0.1],
+#                           batch_sizes=[30])
 # 
 # 
-# 1. The Data set with 50000 images is too large, I used first 500 as traning and testing.
-# 2. Even remotly using HPC still take a long time. codewise, I would try to parallelize the test function with openMPI. I would like to try that if I have time. 
-# 3.scg has oscillations because it is a  method using learning_rateS. it can overshoot sometimes when the error goes to 0
-# 4.Adam has oscillations at later iterationsbecause it is a  method using learning_rateS. it can overshoot sometimes when the error goes to 0
-# 5. For the same setup for method, learning rate, hidden layers, increaseing the epochs will generally get a  better resutl, becasue we are using gradient-based method.
-# 6. For the same setup for learning rate, hidden layers,epochs. SCG performs generally better than ADAM 
-# 7. For the same setup for learning rate, hidden layers,epochs. SCG performs generally better than ADAM 
-# 8. For the same setup for learning rate, hidden layers,epochs. ADAM performs generally better than SGD 
-# 9.  For the same setup for learning rate, hidden layers,epochs. ADAM performs generally better than SGD 
-# 10. the hidden layer  [2, 2, 2, 2, 2] generally does not result in good results. Interesting
-# 11. Put too many layer does not signifantly increase the results. computational cost should evenly distributed to 
-# number of layers and the number of neurons.
-# 12. For Big matrix calculations, instead of openMPI it by parallize the configuration, there are someways to paralleize the matrix calcutions. Should be promising, but will not be effcient as parallize by configurations.
-# 13. setting the learning_rate too big is not good for ADAM, but it can converge.
-# 14. setting the learning_rate too big is not good for SGD, Sometimes it can produce abnormally large values.
-# 15. The best configuration I got is:
-# accuracy 82.8
-# ['scg', [30], 0.01, 40]. Looks like choosing the correct optimizer SCG is more important than other parameters.
-# 16. The MNIST data zip is 16MB. 
-# 17. Unzip it produce a big 200~ MB files. The compress rate is just amazing. 
-# 18. I wonder if it used a similar comression method like the "PNG" format.
-# 19. The first lines indicate the file is a numpy data format. 
-# 20. Look into the gz file, it looks there are no big blocks of 0, indicating it is well compressed. However, if I delete a digits at some location, the whole file is corrupted, makes the compressing method weak when trensfered using SSB modulation or other simialr methods.
+# df
+
+# For each method, try various hidden layer structures, learning rates, and numbers of epochs. Use the validation percent accuracy to pick the best hidden layers, learning rates and numbers of epochs for each method. Report training, validation and test accuracy for your best validation results for each of the three methods.
 # 
-#  
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
+# For meshod adam, the best combination happen to be 
+# 
+#   structs=[
+#                            
+#                              [[[5, 3, 1]], []],
+#                               
+#                             ],
+#                            
+#                           epochs=[20],
+#                           learning_rates=[0.01],
+#                           batch_sizes=[30])
+# 
+# The accuracy is training=100.00	validation=90.5	test=87.5
+# 
+# For method sgd, the best combination happen to be 
+# 
+#   structs=[ [[[20, 3, 2], [5, 3, 1]], [20]] ],                   
+#                           epochs=[20],
+#                           learning_rates=[0.01],
+#                           batch_sizes=[30])
+# 
+# The accuracy is    training100	validation=92.5	test=85
+# 
+# 
 
 # # Grading
 # 
-# Download [A3grader.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A3grader.tar), extract `A3grader.py` before running the following cell.
+# (UPDATED Oct. 21, 9:35am, tolerance on accuracies is now larger) Download [A4grader.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A4grader.tar), extract `A4grader.py` before running the following cell.
 
-# In[67]:
+# 
+
+# In[116]:
 
 
-get_ipython().run_line_magic('run', '-i A3grader.py')
+get_ipython().run_line_magic('run', '-i A4grader.py')
 
 
 # # Extra Credit
 # 
-# Repeat the above experiments with a different data set.  Randonly partition your data into training, validaton and test parts if not already provided.  Write in markdown cells descriptions of the data and your results.
+# Repeat the above experiment using a convolutional neural network defined in `Pytorch`.  Implement this yourself by directly calling `torch.nn` functions.
