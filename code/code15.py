@@ -78,7 +78,7 @@ m, n = maze.shape
 m -= 2  # for ceiling and floor
 n -= 2  # for walls
 Q = np.zeros((m, n, 4))
-Qmc = np.zeros((m, n, 4))
+Qmc = np.zeros((m, n, 4)) # Q for mont carlo method
 actions = np.array([[0, 1], [1, 0], [0, -1], [-1, 0]])  # changes in row and column position of RL agent
 
 ### Set Q value of invalid actions to np.inf
@@ -98,7 +98,7 @@ epsilon = 0.2
 trace = np.zeros((nSteps, 3)) # for x, y, and a
 from IPython.display import display, clear_output
 
-fig = plt.figure(figsize=(10, 10))
+fig = plt.figure()
 
 s = np.array([1, 1])  # start position
 a = 1 #first action (index)
@@ -106,9 +106,21 @@ trials = []
 steps = 0
 goals = 0
 
+walls_row, walls_col = np.where(maze[:, :] == '*') 
+target_row, target_col = np.where(maze[:, :] == 'G') 
+
+
+# plt.plot(walls_col,n-walls_row,'b*') # plot boundary
+# plt.plot(target_col,n-target_row,'r*') # plot target
+
+
+
+#%%
+
+
 for step in range(nSteps):
 	trace[steps, :] = s.tolist() + [a]
-	here = maze[s[0] + 1, s[1] + 1]
+	here = maze[s[0] + 1, s[1] + 1] # why?
 	if here == 'G':
 		# Found the Goal!
 		goals += 1
@@ -127,7 +139,7 @@ for step in range(nSteps):
 		s = np.array([np.random.randint(0, m), np.random.randint(0, n)])
 		#sold = []
 		trials.append(steps)
-	
+		exit()
 	else:
 		# Not goal
 		steps += 1    
@@ -146,38 +158,57 @@ for step in range(nSteps):
 		sold = s
 		aold = a
 		s = s + actions[a, :]
-
-	if (here == 'G' and goals % 100 == 0):
 		
-		fig.clf()
 		
-		ax = fig.add_subplot(3, 2, 1, projection='3d')
+		plt.clf()
+		
+		plt.subplot(2, 1, 1) # major plotting issue, G is not at the right position.
+		plt.plot(walls_col,n-walls_row+1,'b*') # plot boundary
+		plt.plot(target_col,n-target_row+1,'r*') # plot target
+		plt.plot(s[0],n-s[1]+1,'y*') # plot current position
+		
+		plt.subplot(2, 1, 2)
+		ax = fig.add_subplot(2, 1, 2, projection='3d')
 		showQ(Q, 'TD', ax)
-
-		ax = fig.add_subplot(3, 2, 2, projection='3d')
-		showQ(Qmc, 'Monte Carlo', ax)
-		plt.subplot(3, 2, 3)
-		showPolicy(Q)
-		plt.title('Q Policy')
-
-		plt.subplot(3, 2, 4)
-		showPolicy(Qmc)
-		plt.title('Monte Carlo Q Policy')
-
-		plt.subplot(3, 2, 5)
-		plt.plot(trace[:steps + 1, 1], trace[:steps + 1, 0], 'o-')
-		plt.plot(trace[0, 1], trace[0, 0], 'ro')
-		plt.xlim(0 - 0.5, 9 + 0.5)
-		plt.ylim(9 + 0.5, 0 - 0.5)
-		plt.title('Most Recent Trial')
-
-		plt.subplot(3, 2, 6)
-		plt.plot(trials, '-')
-		plt.xlabel('Trial')
-		plt.ylabel('Steps to Goal')
-
-		clear_output(wait=True)
-		display(fig);
+		
+		display(fig)
+		
+		print(f' step: {step} s: {s}.')
+		
+		
+# =============================================================================
+# 	if (here == 'G' and goals % 100 == 0):
+# 		
+# 		fig.clf()
+# 		
+# 		ax = fig.add_subplot(3, 2, 1, projection='3d')
+# 		showQ(Q, 'TD', ax)
+# 
+# 		ax = fig.add_subplot(3, 2, 2, projection='3d')
+# 		showQ(Qmc, 'Monte Carlo', ax)
+# 		plt.subplot(3, 2, 3)
+# 		showPolicy(Q)
+# 		plt.title('Q Policy')
+# 
+# 		plt.subplot(3, 2, 4)
+# 		showPolicy(Qmc)
+# 		plt.title('Monte Carlo Q Policy')
+# 
+# 		plt.subplot(3, 2, 5)
+# 		plt.plot(trace[:steps + 1, 1], trace[:steps + 1, 0], 'o-')
+# 		plt.plot(trace[0, 1], trace[0, 0], 'ro')
+# 		plt.xlim(0 - 0.5, 9 + 0.5)
+# 		plt.ylim(9 + 0.5, 0 - 0.5)
+# 		plt.title('Most Recent Trial')
+# 
+# 		plt.subplot(3, 2, 6)
+# 		plt.plot(trials, '-')
+# 		plt.xlabel('Trial')
+# 		plt.ylabel('Steps to Goal')
+# 
+# 		clear_output(wait=True)
+# 		display(fig);
+# =============================================================================
 
 	if here == 'G':
 		steps = 0
