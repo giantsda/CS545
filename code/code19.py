@@ -1,7 +1,8 @@
 #!/usr/bin/python3
+ 
 import numpy as np
 import matplotlib.pyplot as plt
-# %matplotlib inline
+%matplotlib inline
 import time  # for sleep
 import IPython.display as ipd  # for display and clear_output
 from IPython.display import display, clear_output  # for the following animation
@@ -144,8 +145,8 @@ class Qnet(Agent):
 			  gamma, epsilon, final_epsilon,
 			  trial_callback=None):
 
-# 		if trial_callback:
-# 			fig = plt.figure(figsize=(10, 10))
+		if trial_callback:
+			fig = plt.figure(figsize=(10, 10))
 			
 		epsilon_decay =  np.exp(np.log(final_epsilon) / n_trials) # to produce this final value
 		print('epsilon_decay is', epsilon_decay)
@@ -165,101 +166,36 @@ class Qnet(Agent):
 			# Rest is for plotting
 			epsilon_trace[trial] = epsilon
 			r_trace[trial] = np.mean(R)
-
-# 			if trial_callback and (trial + 1 == n_trials or trial % (n_trials / 10) == 0):
-# 				print('runing %2.2f' % (trial / (n_trials / 10))*100)
-# 				fig.clf()
-# 				trial_callback(agent, trial, n_trials, X, epsilon_trace, r_trace)
-# 				clear_output(wait=True)
-# 				display(fig)
-
+ 
 		if trial_callback:
 			clear_output(wait=True)
 
 		return epsilon_trace, r_trace
+
 
 	def use(self, X):
 		return self.Qnet.use(X)
 from matplotlib import cm
 
 def plot_status(agent, trial, n_trials, X, epsilon_trace, r_trace):
-	a=1
+	 a=1
 
-# =============================================================================
-#   plt.subplot(3, 3, 1)
-#   plt.plot(epsilon_trace[:trial + 1])
-#   plt.ylabel('Random Action Probability ($\epsilon$)')
-#   plt.ylim(0, 1)
-#              
-#   plt.subplot(3, 3, 2)
-#   plt.plot(r_trace[:trial + 1], alpha=0.5)
-#   plt.ylabel('Mean reinforcement')
-#       
-#   valid_actions = agent.environment.valid_actions
-# 
-#   qs = agent.use(np.array([[s, 0, a] for a in valid_actions for s in range(11)]))
-#              
-#   plt.subplot(3, 3, 3)
-#   acts = ['L', '0', 'R']
-#   actsiByState = np.argmax(qs.reshape((len(valid_actions), -1)), axis=0)
-#   for i in range(11):
-#       plt.text(i, 0, acts[actsiByState[i]])
-#       plt.xlim(-1, 11)
-#       plt.ylim(-1, 1)
-#   plt.text(2, 0.2,'Policy for Zero Velocity')
-#   plt.axis('off')
-#              
-#              
-#   plt.subplot(3, 3, 4)
-#   n = 20
-#   positions = np.linspace(0, 10, n)
-#   velocities =  np.linspace(-5, 5, n)
-#   xs, ys = np.meshgrid(positions, velocities)
-#   xsflat = xs.flat
-#   ysflat = ys.flat
-#   qs = agent.use(np.array([[xsflat[i], ysflat[i], a] for a in valid_actions for i in range(len(xsflat))]))
-#   qs = qs.reshape((len(valid_actions), -1)).T
-#   qsmax = np.max(qs, axis=1).reshape(xs.shape)
-#   cs = plt.contourf(xs, ys, qsmax, 20, cmap=cm.coolwarm)
-#   plt.colorbar(cs)
-#   plt.xlabel('$x$')
-#   plt.ylabel('$\dot{x}$')
-#   plt.title('Max Q')
-#              
-#   plt.subplot(3, 3, 5)
-#   acts = np.array(valid_actions)[np.argmax(qs, axis=1)].reshape(xs.shape)
-#   cs = plt.contourf(xs, ys, acts, [-2, -0.5, 0.5, 2], cmap=cm.coolwarm)
-#   plt.colorbar(cs)
-#   plt.xlabel('$x$')
-#   plt.ylabel('$\dot{x}$')
-#   plt.title('Actions')
-#   
-#   plt.subplot(3, 3, 6)
-#   plt.plot(X[:, 0], X[: ,1])
-#   plt.plot(X[-1, 0], X[-1, 1], 'ro')
-#   plt.xlabel('$x$')
-#   plt.ylabel('$\dot{x}$')
-#   plt.fill_between([4, 6], [-5, -5], [5, 5], color='red', alpha=0.3)  # CHECK OUT THIS FUNCTION!
-#   plt.xlim(-1, 11)
-#   plt.ylim(-5, 5)
-#   plt.title('Last Trial')
-# 
-#   ax = plt.subplot(3, 3, 7, projection='3d')
-#   ax.plot_surface(xs, ys, qsmax, linewidth=0, cmap=cm.coolwarm)
-#   ax.set_xlabel('$x$')
-#   ax.set_ylabel('$\dot{x}$')
-#   plt.title('Max Q')
-#   
-#   ax = plt.subplot(3, 3, 8, projection='3d')
-#   ax.plot_surface(xs, ys, acts, cmap=cm.coolwarm, linewidth=0)
-#   ax.set_xlabel('$x$')
-#   ax.set_ylabel('$\dot{x}$')
-#   plt.title('Action')
-#   
-#   test_it(agent, 10, 500)
-# 
-#   plt.tight_layout()
-# =============================================================================
+#     plt.subplot(3, 3, 6)
+#     plt.plot(X[:, 0], X[: ,1])
+#     plt.plot(X[-1, 0], X[-1, 1], 'ro')
+#     plt.xlabel('$x$')
+#     plt.ylabel('$\dot{x}$')
+#     plt.fill_between([4, 6], [-5, -5], [5, 5], color='red', alpha=0.3)  # CHECK OUT THIS FUNCTION!
+#     plt.xlim(-1, 11)
+#     plt.ylim(-5, 5)
+#     plt.title('Last Trial')
+
+ 
+
+#     test_it(agent, 10, 500)
+
+#     plt.tight_layout()
+ 
 
 def test_it(agent, n_trials, n_steps_per_trial):
 	xs = np.linspace(0, 10, n_trials)
@@ -268,8 +204,8 @@ def test_it(agent, n_trials, n_steps_per_trial):
 	# For a number (n_trials) of starting positions, run marble sim for n_steps_per_trial
 	for x in xs:
 		
-		s = [x, 0]  # 0 velocity
-		x_trace = np.zeros((n_steps_per_trial, 2))
+		s = [x, 0,goal] # 0 velocity
+		x_trace = np.zeros((n_steps_per_trial, 3))
 		for step in range(n_steps_per_trial):
 			a = agent.epsilon_greedy(s, 0.0) # epsilon = 0
 			s = agent.environment.next_state(s, a)
@@ -296,7 +232,7 @@ class Marble_Variable_Goal(Environment):
 		
 	def initial_state(self):
 		goal=np.random.randint(1,10)
-		goal =self.goal
+		self.goal =goal
 		return np.array([10 * np.random.uniform(), 0.0, goal])
 
 	def next_state(self, state, action):
@@ -323,18 +259,18 @@ class Marble_Variable_Goal(Environment):
 
 	def terminal_state(self, state):
 		return False
-	
 	def changeGoal(self,newgoal):
 		self.goal=newgoal
 		
 		
 		
+		
 def distances_to_goal(agent,goal):
 	n_steps_per_trial=200
-	xs = np.linspace(0, 10, 50)
+	xs = np.linspace(0, 10, 25)
 	d=[]
 	for x in xs:
-		s = [0, 0, goal]  # 0 velocity
+		s = [x, 0, goal]  # 0 velocity
 		x_trace = np.zeros((n_steps_per_trial, 3))
 		for step in range(n_steps_per_trial):
 			a = agent.epsilon_greedy(s, 0.0) # epsilon = 0
@@ -342,47 +278,76 @@ def distances_to_goal(agent,goal):
 			x_trace[step, :] = s
 		lastPostion=x_trace[-1,0]
 		d.append(abs(lastPostion-goal))
- 
+		print(f'distance={abs(lastPostion-goal)}\n')
 	return sum(d)/len(d)  # return average distance
 
 
-
-marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
-
-
-
-
-
-
-goals=[]
-distances=[]
-for goal in range(1,10):
-	marble.changeGoal(goal)
-	agent = Qnet(marble, hidden_layers=[10, 10],
-				 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
-				 Q_means=[-2], Q_stds=[1])
-	
-	# epsilon_trace, r_trace =  agent.train(n_trials=500, n_steps_per_trial=200, n_epochs=100,
-	# 									  method='sgd', learning_rate=0.01, gamma=0.9,
-	# 									  epsilon=1, final_epsilon=0.01,
-	# 									  trial_callback=plot_status)
-	
-	epsilon_trace, r_trace =  agent.train(n_trials=300, n_steps_per_trial=200, n_epochs=200,
-										  method='sgd', learning_rate=0.01, gamma=0.9,
-										  epsilon=1, final_epsilon=0.01,
-										  trial_callback=plot_status)
-	d=distances_to_goal(agent,goal)
-	goals.append(goal)
-	distances.append(d)
-
-	print(f'goal={goal}; distance={d}\n')
-
-
-
-plt.plot(goals,distances,'o-')
-plt.show()
-
+# =============================================================================
+# 
+# marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+# 
+#  
+# goals=[]
+# distances=[]
+# for goal in range(1,10):
+# 	marble.changeGoal(goal)
+# 	agent = Qnet(marble, hidden_layers=[10, 10],
+# 				 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+# 				 Q_means=[-2], Q_stds=[1])
+# 	
+# 	# epsilon_trace, r_trace =  agent.train(n_trials=500, n_steps_per_trial=200, n_epochs=100,
+# 	# 									  method='sgd', learning_rate=0.01, gamma=0.9,
+# 	# 									  epsilon=1, final_epsilon=0.01,
+# 	# 									  trial_callback=plot_status)
+# 	
+# 	epsilon_trace, r_trace =  agent.train(n_trials=300, n_steps_per_trial=200, n_epochs=200,
+# 										  method='sgd', learning_rate=0.01, gamma=0.9,
+# 										  epsilon=1, final_epsilon=0.01,
+# 										  trial_callback=plot_status)
+# 	d=distances_to_goal(agent,goal)
+# 	goals.append(goal)
+# 	distances.append(d)
+# 
+# 	print(f'goal={goal}; distance={d}\n')
+# 
+# 
+# 
+# plt.plot(goals,distances,'o-')
+# plt.show()
+# 
+# =============================================================================
  
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+n_steps_per_trialS=(10, 50, 100)
+ds=[]
+
+marble.changeGoal(goal)
+agent = Qnet(marble, hidden_layers=[3, 3],
+			 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+			 Q_means=[-2], Q_stds=[1])
+
+epsilon_trace, r_trace =  agent.train(n_trials=15, n_steps_per_trial=10, n_epochs=50,
+									  method='sgd', learning_rate=0.01, gamma=0.9,
+									  epsilon=1, final_epsilon=0.01,
+									  trial_callback=plot_status)
+d=distances_to_goal(agent,goal)
+ds.append(d)
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

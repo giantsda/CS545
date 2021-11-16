@@ -1,438 +1,548 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# <h1>Table of Contents<span class="tocSkip"></span></h1>
-# <div class="toc"><ul class="toc-item"><li><span><a href="#Convolutional-Neural-Networks" data-toc-modified-id="Convolutional-Neural-Networks-1">Convolutional Neural Networks</a></span><ul class="toc-item"><li><span><a href="#Requirements" data-toc-modified-id="Requirements-1.1">Requirements</a></span></li></ul></li><li><span><a href="#Experiments" data-toc-modified-id="Experiments-2">Experiments</a></span></li><li><span><a href="#Grading" data-toc-modified-id="Grading-3">Grading</a></span></li><li><span><a href="#Extra-Credit" data-toc-modified-id="Extra-Credit-4">Extra Credit</a></span></li></ul></div>
+# # A5.1 Reinforcement Learning for Marble with Variable Goal
 
-# # Convolutional Neural Networks
+# For this assignment, start with the `19 Reinforcement Learning Modular Framework` notebook.  Recall that this code used reinforcement learning to learn to push a marble towards the goal position of 5 and keep it there.
 # 
-# For this assignment, use the `NeuralNetworkClassifier_CNN` class defined for you in `neuralnetworks_A4.py` contained in [A4code.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A4code.tar).  This tar file also includes other functions you will use here, contained in `mlfuncs.py`.
+# The objective of the following required modification is an agent that has been trained to directly move the marble to a specified goal without any further training. 
+# 
+# <font color="red">Modify the code</font> to allow any goal position from 1 to 9.  First, rename the `Marble` class to `Marble_Variable_Goal`.  Then, modify the `Marble_Variable_Goal` class so that it includes the goal in the state, allowing the agent to learn to push the marble to any given goal.  Modify the `intial_state` function to set the goal to a random integer from 1 to 9.
+# 
+# <font color='red'>Do not modify</font> the `Qnet` class. It should run correctly when applied to your new `Marble_Variable_Goal` class.
+# 
+# <font color='red'>Discuss</font> what you modified in the code for this assignment.
 
-# In[100]:
+# <font color='red'>Add some code</font> at the end of the notebook that applies the trained agent to the marble at goals from 1 to 9.  For each goal, start the marble at positions 0 through 10 with zero velocity and the specified goal and applies the trained agent to control the marble for 200 steps.  Calculate the distance of the final state from the goal.  Average this distance over all starting positions for the specified goal and store in a numpy array with one row for each goal and each row containing the goal and the average of distances to goal over all starting positions. Call this numpy array, `distances_to_goal`.  Plot the results of these average distances versus the goal.
+# 
+# <font color='red'>Explore different parameter values</font>, including the network hidden layer structure, number of trials, number of steps per trial, learning rate, number of epochs, and final epsilon value to try to get the best results for `distances_to_goal`. Try just three or four different values for each parameter, varying one parameter value at a time. After you have found some parameter values that often work well, set the parameters to these values and run again to produce the graphs from `plot_status` showing the results with these parameters. But, first <font color='red'>modify `plot_status` code</font> for subplots 6 and 9 so that the vertical pink goal region correctly shows the current goal.  Add the current goal to the title of the subplot 9.
+# 
+# <font color='red'>Discuss</font> the results, and discuss which parameter values seem to perform well.
 
+# Here is some code and parameter values that I have found to be successful...usually.  As you know, results vary quite a bit from one run to another. Understand that you will not find parameter values that work perfectly every time.  You are welcome to start with these parameter values and experiment with variations of these.
 
-get_ipython().run_line_magic('load_ext', 'autoreload')
-get_ipython().run_line_magic('autoreload', '2')
+# In[53]:
 
-
-# In[101]:
 
 
 import numpy as np
 import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
-
-import neuralnetworks_A4 as nn
-import mlfuncs
-
-
-# ## Requirements
-
-# First, look carefully at the `neuralnetworks_A4.py` and `optimizers.py` code provided above.  Some changes have been made in each. The most significant change is that the `train` function now accepts a `batch_size` argument so that the gradients we calculate don't have to be over the whole training set.  Recall that we can easily run out of memory with convolutional networks if we calculate gradients over the whole training set.  Also, `'scg'` is not a valid optimizer in this version of the code.
-# 
-# Implement the following functions:
-# 
-#     dataframe_result = run_these_parameters(X, T, n_folds,
-#                                             layers_structs, 
-#                                             methods, 
-#                                             epochs, 
-#                                             learning_rates.
-#                                             batch_sizes)
-#                                               
-#     result = train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest,
-#                                   struct,
-#                                   n_epochs, 
-#                                   method, 
-#                                   learning_rate,
-#                                   batch_size)
-#                                   
-# The file `mlfuncs.py` contains several functions you will need to define these two required functions.  They are illustrated in the following examples.
-
-# In[102]:
+import time  # for sleep
+import IPython.display as ipd  # for display and clear_output
+from IPython.display import display, clear_output  # for the following animation
+import os
+import copy
+import signal
+import os
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.colors import LightSource
+import optimizers as opt
+import numpy as np
+import matplotlib.pyplot as plt
 
 
-Y = np.array([0, 1, 1, 0, 0]).reshape(-1, 1)
-T = np.array([0, 1, 0, 1, 0]).reshape(-1, 1)
-mlfuncs.percent_equal(Y, T)
+import numpy as np
+import matplotlib.pyplot as plt
+import neuralnetworks_A4 as nn   # from A4
 
+from IPython.display import display, clear_output
 
-# The purpose of that one is obvious.  This next one is needed for storing your network stucture in a pandas DataFrame.  The structure must be an immutable data type.  A list is mutable, but a tuple is not.  So we must make sure all parts of the network structure specification is composed of tuples, not lists.
+from abc import ABC, abstractmethod
+   
+class Environment(ABC):
+   
+   def __init__(self, valid_actions):
+       self.valid_actions = valid_actions
 
-# In[103]:
-
-
-struct = [ [], [10]]
-mlfuncs.list_to_tuple(struct)
-
-
-# In[104]:
-
-
-struct = [ [[2, 4, 1], [5, 4, 2]], [20, 10]]
-mlfuncs.list_to_tuple(struct)
-
-
-# And here is a function that generates all training, validation, and testing partitions given the data and the number of folds.  It creates the partitions in a stratified manner, meaning all folds will have close to the same proportion of samples from each class.
-
-# In[105]:
-
-
-X = np.arange(12).reshape(6, 2)
-T = np.array([0, 0, 1, 0, 1, 1]).reshape(-1, 1)
-X, T
-
-
-# In[106]:
-
-
-for Xtrain, Ttrain, Xval, Tval, Xtest, Ttest in mlfuncs.generate_partitions(X, T, n_folds=3, classification=True):
-        print(Xtrain, '\n', Ttrain, '\n', Xval, '\n', Tval, '\n', Xtest, '\n', Ttest)
-        print()
-
-
-# The function `run_these_parameters` loops through all values in `layers_structs`, `methods`, `epochs`, `learning rates` and `batch_sizes`.  For each set of parameter values, it loops through all ways of creating training, validation, and testing partitions using `n_folds`.  For each of these repetitions, `train_this_partition` is called to create the specified convolutional neural network, trains it, collects the percent correct on training, validation, and test sets, and returns a list of parameter values and the three accuracies.  `run_these_parameters` returns all of these results as a `pandas` DataFrame with column names `('struct', 'method', 'n_epochs', 'learning_rate', 'batch_size', 'train %', 'val %', 'test %')`. 
-# 
-# The resulting DataFrame results stored in variable `df` can be summarized with a statement like
-# 
-#       df.groupby(['struct', 'method', 'n_epochs', 'learning_rate',
-#                   'batch_size']).mean())
-
-# Define the two required functions in code cells above this cell.
-# 
-# The following examples show examples of how they should run, as
-
-# In[107]:
-
-
-def make_images(n_each_class):
-    '''Make 20x20 black and white images with diamonds or squares for the two classes, as line drawings.'''
-    images = np.zeros((n_each_class * 4, 20, 20))  # nSamples, rows, columns
-    radii = 3 + np.random.randint(10 - 5, size=(n_each_class * 4, 1))
-    centers = np.zeros((n_each_class * 4, 2))
-    for i in range(n_each_class * 4):
-        r = radii[i, 0]
-        centers[i, :] = r + 1 + np.random.randint(18 - 2 * r, size=(1, 2))
-        x = int(centers[i, 0])
-        y = int(centers[i, 1])
-        if i < n_each_class:
-            # plus
-            images[i, x - r:x + r, y] = 1.0
-            images[i, x, y - r:y + r] = 1.0
-        elif i < n_each_class * 2:
-            # minus
-            images[i, x, y - r:y + r] = 1.0
-        elif i < n_each_class * 3:
-            # x
-            images[i, range(x - r, x + r), range(y - r, y + r)] = 1.0
-            images[i, range(x - r, x + r), range(y + r, y - r, -1)] = 1.0
-        else:
-            # /
-            images[i, range(x - r, x + r), range(y - r, y + r)] = 1.0
-
-    T = np.array(['plus'] * n_each_class + ['minus'] * n_each_class + ['times'] * n_each_class + ['divide'] * n_each_class).reshape(-1, 1)
-
-    n, r, c = images.shape
-    images = images.reshape(n, r, c, 1)  # add channel dimsension
-    return images, T
-
-n_each_class = 10
-X, T = make_images(n_each_class)
-p = 0
-for i in range(4 * n_each_class):
-    p += 1
-    plt.subplot(4, n_each_class, p)
-    plt.imshow(-X[i, :, :, 0], cmap='gray')
-    plt.axis('off')
-
-
-# In[108]:
-
-
-n_each_class = 500
-X, T = make_images(n_each_class)
-
-
-# In[109]:
-
-
-import pandas as pd
+   @abstractmethod
+   def initial_state(self):
+       return state  # the initial state
+   
+   @abstractmethod
+   def next_state(self, state, action):
+       return next_state  
+   
+   @abstractmethod
+   def reinforcement(self, state):
+       return r # scalar reinforcement
+  
+   def terminal_state(self, state):
+       return False  # True if state is terminal state
 
 
 
-# from A4mysolution import *
-def train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest, struct, n_epochs, method, learning_rate, batch_size):
-    mlfuncs.make_batches(Xtrain, Ttrain, batch_size)
-    nnet_cnn = nn.NeuralNetworkClassifier_CNN([Xtrain.shape[1], Xtrain.shape[2], Xtrain.shape[3]], struct[0], struct[1], np.unique(Ttrain))
-    nnet_cnn.train(Xtrain, Ttrain, n_epochs, method=method, learning_rate=learning_rate, momentum=0.1, batch_size=batch_size, verbose=False)
-    
-    Yval,Y = nnet_cnn.use(Xval)
-    Ytest,Y = nnet_cnn.use(Xtest)
-    Ytrain,Y = nnet_cnn.use(Xtrain)
-    
-    percentageTrain = mlfuncs.percent_equal(Ytrain, Ttrain)
-    percentageVal= mlfuncs.percent_equal(Yval, Tval)
-    percentageTest = mlfuncs.percent_equal(Ytest, Ttest)
-    Restult = []
-#   ('struct', 'method', 'n_epochs', 'learning_rate', 'batch_size', 'train %', 'val %', 'test %').
 
+class Agent(ABC):
+   
+   def __init__(self, environment):
+       self.environment = environment
 
-    Restult.append(mlfuncs.list_to_tuple(struct))
-    Restult.append(mlfuncs.list_to_tuple(method))
-    Restult.append(mlfuncs.list_to_tuple(n_epochs))
-    Restult.append(mlfuncs.list_to_tuple(learning_rate))
-    Restult.append(mlfuncs.list_to_tuple(batch_size))
-    Restult.append(mlfuncs.list_to_tuple(percentageTrain))
-    Restult.append(mlfuncs.list_to_tuple(percentageVal))
-    Restult.append(mlfuncs.list_to_tuple(percentageTest))
- 
-    return Restult
+   @abstractmethod
+   def make_samples(self, n_samples, epsilon):
+       return X, R, Qn, terminal_state
 
+   def update_Qn(self, X, Qn, terminal_state):
+       n_samples = X.shape[0]
+       for i in range(n_samples - 1):
+           if not terminal_state[i+1]:
+               Qn[i] = self.use(X[i+1])
+       return Qn
 
+   def epsilon_greedy(self, state, epsilon):
+       valid_actions = self.environment.valid_actions
 
-def run_these_parameters(X, T, n_folds,
-            structs, 
-            methods, 
-            epochs, 
-            learning_rates,
-            batch_sizes):
-    classes = ['struct', 'method', 'n_epochs', 'learning_rate', 'batch_size', 'train %', 'val %', 'test %']
-    resultData = []
-    for struct in structs:
-        for method in methods:
-            for epoch in epochs:
-                for learning_rate in learning_rates:
-                    for batch_size in batch_sizes:
-#                           +struct, method, epoch, learning_rate, Xtest, batch_size
-                        for Xtrain, Ttrain, Xval, Tval, Xtest, Ttest in mlfuncs.generate_partitions(X, T, n_folds, validation=True,shuffle=True, classification=True):
-#                             print(f'Doing {struct};{method};{epoch};{learning_rate};{batch_size}')
-                            Restult = train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest, struct, epoch, method, learning_rate, batch_size)
-                            resultData.append(Restult)
+       if np.random.uniform() < epsilon:
+           # Random Move
+           action = np.random.choice(valid_actions)
+       else:
+           # Greedy Move
+           Qs = [self.use(np.hstack((state, a)).reshape((1, -1))) for a in valid_actions]
+           ai = np.argmax(Qs)
+           action = valid_actions[ai]
 
-    table = pd.DataFrame(resultData, columns=classes)
-    return table
+       return action
 
+   @abstractmethod
+   def train(self):
+       return
 
-# In[110]:
+   @abstractmethod
+   def use(self, X):
+       return # Q values for each row of X, each consisting of state and action
+class Qnet(Agent):
 
+   def __init__(self, environment, hidden_layers, X_means=None, X_stds=None, Q_means=None, Q_stds=None):
+       self.environment = environment
+       state_size = environment.initial_state().size  # assumes state is an np.array
+       valid_actions = environment.valid_actions
+       action_size = 1 if valid_actions.ndim == 1 else valid_actions.shape[1]
 
-struct = [ [[2, 5, 1]], [5] ]
-n_epochs = 10
-method= 'adam'
-learning_rate = 0.01
-batch_size = 10
+       self.Qnet = nn.NeuralNetwork(state_size + action_size, hidden_layers, 1)
+       if X_means:
+           self.Qnet.X_means = np.array(X_means)
+           self.Qnet.X_stds = np.array(X_stds)
+           self.Qnet.T_means = np.array(Q_means)
+           self.Qnet.T_stds = np.array(Q_stds)
 
-n_samples = X.shape[0]
-rows = np.arange(n_samples)
-np.random.shuffle(rows)
-ntrain = int(n_samples * 0.8)
-nval = int(n_samples * 0.1)
-Xtrain = X[rows[:ntrain], ...]
-Ttrain = T[rows[:ntrain], ...]
-Xval = X[rows[ntrain:ntrain+nval], ...]
-Tval = T[rows[ntrain:ntrain+nval], ...]
-Xtest = X[rows[ntrain+nval:], ...]
-Ttest = T[rows[ntrain+nval:], ...]
+   def make_samples(self, n_samples, epsilon):
+
+       state_size = self.environment.initial_state().size  # assumes state is an np.array
+       valid_actions = self.environment.valid_actions
+       action_size = 1 if valid_actions.ndim == 1 else valid_actions.shape[1]
+
+       X = np.zeros((n_samples, state_size + action_size))
+       R = np.zeros((n_samples, 1))
+       Qn = np.zeros((n_samples, 1))
+       terminal_state = np.zeros((n_samples, 1), dtype=bool)  # All False values
+
+       state = self.environment.initial_state()
+       state = self.environment.next_state(state, 0)        # Update state, sn from s and a
+       action = self.epsilon_greedy(state, epsilon)
+
+       # Collect data from n_samples steps
+       for step in range(n_samples):
+
+           next_state = self.environment.next_state(state, action)        # Update state, sn from s and a
+           r = self.environment.reinforcement(state)   # Calculate resulting reinforcement
+           next_action = self.epsilon_greedy(next_state, epsilon)
+           X[step, :] = np.hstack((state, action))
+           R[step, 0] = r
+           if self.environment.terminal_state(state):
+               terminal_state[step, 0] = True
+               Qn[step, 0] = 0
+           else:
+               Qn[step, 0] = self.use(np.hstack((next_state, next_action)))
+           # Advance one time step
+           state, action = next_state, next_action
+
+       return X, R, Qn, terminal_state
+
+   def update_Qn(self, X, Qn, terminal_state):
+       n_samples = X.shape[0]
+       for i in range(n_samples - 1):
+           if not terminal_state[i+1]:
+               Qn[i] = self.use(X[i+1])
+       return Qn
+
+   def train(self, n_trials, n_steps_per_trial, n_epochs, method, learning_rate, 
+             gamma, epsilon, final_epsilon,
+             trial_callback=None):
+
+       if trial_callback:
+           fig = plt.figure(figsize=(10, 10))
            
-result = train_this_partition(Xtrain, Ttrain, Xval, Tval, Xtest, Ttest,
-                              struct, n_epochs, method, learning_rate, batch_size)
-result
+       epsilon_decay =  np.exp(np.log(final_epsilon) / n_trials) # to produce this final value
+       print('epsilon_decay is', epsilon_decay)
+       epsilon_trace = np.zeros(n_trials)
+       r_trace = np.zeros(n_trials)
+
+       for trial in range(n_trials):
+
+           X, R, Qn, terminal_state = self.make_samples(n_steps_per_trial, epsilon)
+
+           for epoch in range(n_epochs):
+               self.Qnet.train(X, R + gamma * Qn, 1,  method=method, learning_rate=learning_rate, batch_size=-1, verbose=False)
+               self.update_Qn(X, Qn, terminal_state)
+
+           epsilon *= epsilon_decay
+
+           # Rest is for plotting
+           epsilon_trace[trial] = epsilon
+           r_trace[trial] = np.mean(R)
+
+           if trial_callback and (trial + 1 == n_trials or trial % (n_trials / 10) == 0):
+               print('runing %2.2f' % (trial / (n_trials / 10))*100)
+               fig.clf()
+               trial_callback(agent, trial, n_trials, X, epsilon_trace, r_trace)
+               clear_output(wait=True)
+               display(fig)
+
+       if trial_callback:
+           clear_output(wait=True)
+
+       return epsilon_trace, r_trace
 
 
-# In[111]:
+   def use(self, X):
+       return self.Qnet.use(X)
+from matplotlib import cm
+
+def plot_status(agent, trial, n_trials, X, epsilon_trace, r_trace):
+   a=1
+
+   plt.subplot(3, 3, 6)
+   plt.plot(X[:, 0], X[: ,1])
+   plt.plot(X[-1, 0], X[-1, 1], 'ro')
+   plt.xlabel('$x$')
+   plt.ylabel('$\dot{x}$')
+   plt.fill_between([4, 6], [-5, -5], [5, 5], color='red', alpha=0.3)  # CHECK OUT THIS FUNCTION!
+   plt.xlim(-1, 11)
+   plt.ylim(-5, 5)
+   plt.title('Last Trial')
 
 
-# df = run_these_parameters(X, T, n_folds=4,
-#                          structs=[
-#                              [ [], [] ],
-#                              [ [], [10] ],
-#                              [[[5, 3, 1]], []],
-#                              [[[20, 3, 2], [5, 3, 1]], [20]],
-#                             ],
-#                           methods=['adam'], # , 'sgd'],
-#                           epochs=[10],
-#                           learning_rates=[0.01], #, 0.1],
-#                           batch_sizes=[3])
-# df
+
+   test_it(agent, 10, 500)
+
+   plt.tight_layout()
 
 
-# # Experiments
-# 
-# When you have `train_this_partition` and `run_these_parameters`, use them to explore the parameter values, trying to find combinations of parameter values that result in high validation accuracies.  
-# 
-# Start with one value for each of the five parameters, but remember to specifiy them as a list of one element, like `learning_rates=[0.01]`.  Then run again with 3 or 4 values for one parameter.  Note the best value.  Use that value for that parameter, then add more values for a different parameter.  
-# 
-# Proceed this way for each of the parameter values.  Discuss what you observe after each call to `run_these_parameters` with at least two sentences for each run.  Do the parameter values you find that work best surprise you?  Also discuss how well the validation and test accuracies equal each other.
-# 
-# For each method, try various hidden layer structures, learning rates, and numbers of epochs.  Use the validation percent accuracy to pick the best hidden layers, learning rates and numbers of epochs for each method.  Report training, validation and test accuracy for your best validation results for each of the three methods.
-# 
-
-# In[112]:
-
-
-df = run_these_parameters(X, T, n_folds=4,
-                         structs=[
-                             [ [], [] ],
-                             [ [], [10] ],
-                             [[[5, 3, 1]], []],
-                             [[[20, 3, 2], [5, 3, 1]], [20]],
-                            ],
-                          methods=['adam'], # , 'sgd'],
-                          epochs=[10],
-                          learning_rates=[0.01], #, 0.1],
-                          batch_sizes=[3])
-df
+def test_it(agent, n_trials, n_steps_per_trial):
+   xs = np.linspace(0, 10, n_trials)
+   plt.subplot(3, 3, 9) 
+   
+   # For a number (n_trials) of starting positions, run marble sim for n_steps_per_trial
+   for x in xs:
+       
+       s = [x, 0,goal] # 0 velocity
+       x_trace = np.zeros((n_steps_per_trial, 3))
+       for step in range(n_steps_per_trial):
+           a = agent.epsilon_greedy(s, 0.0) # epsilon = 0
+           s = agent.environment.next_state(s, a)
+           x_trace[step, :] = s
+           
+       plt.plot(x_trace[:, 0], x_trace[:, 1])
+       plt.plot(x_trace[-1, 0], x_trace[-1, 1], 'ro')
+       plt.fill_between([4, 6], [-5, -5], [5, 5], color='pink', alpha=0.3)
+       plt.xlim(-1, 11)
+       plt.ylim(-5, 5)
+       plt.ylabel('$\dot{x}$')
+       plt.xlabel('$x$')
+       plt.title('State Trajectories for $\epsilon=0$')
+       
+       
 
 
-# (((5, 3, 1),), ())	is the best  for structs.
-# The most complex structures does not produces the best results.
-# In most case, result with train set is bette than test set. 
+class Marble_Variable_Goal(Environment):
 
-# In[113]:
+   def __init__(self, valid_actions):
+       super().__init__(valid_actions)
+       self.goal = None
+       
+       
+   def initial_state(self):
+       goal=np.random.randint(1,10)
+       self.goal =goal
+       return np.array([10 * np.random.uniform(), 0.0, goal])
 
+   def next_state(self, state, action):
+       '''[0] is position, s[1] is velocity. a is -1, 0 or 1'''    
+       next_state = state.copy()
+       deltaT = 0.1                           # Euler integration time step
+       next_state[0] += deltaT * state[1]                  # Update position
+       force = action
+       mass = 0.5
+       next_state[1] += deltaT * (force / mass - 0.2 * state[1])  # Update velocity. Includes friction
+       
+       next_state[2]=self.goal 
+       # Bound next position. If at limits, set velocity to 0.
+       if next_state[0] < 0:        
+           next_state = [0., 0.,self.goal ]    # these constants as ints were causing the errors we discussed in class. I DON'T KNOW WHY!!
+       elif next_state[0] > 10:
+           next_state = [10., 0.,self.goal ]
 
-df = run_these_parameters(X, T, n_folds=4,
-                         structs=[
-                             [[[5, 3, 1]], []],           
-                            ],
-                          methods=['adam' , 'sgd'],
-                          epochs=[10],
-                          learning_rates=[0.01], #, 0.1],
-                          batch_sizes=[3])
-df
+       return next_state
 
+   def reinforcement(self, state):
+       goal = self.goal
+       return 0 if abs(state[0]- goal) < 1 else -1
 
-# Results usign sgd and adam are compareable and all of them are acceptable.
-# Sgd performs slightly better than adam
-
-# In[82]:
-
-
-df = run_these_parameters(X, T, n_folds=4,
-                         structs=[
-                             [[[5, 3, 1]], []],           
-                            ],
-                          methods=['sgd'],
-                          epochs=[10,20,30],
-                          learning_rates=[0.01], #, 0.1],
-                          batch_sizes=[3])
-df
-
-
-# The results using 10,20,30 are comparable with 20 better than others.
-# Probably because the batch size was set too small.
-
-# In[84]:
-
-
-df = run_these_parameters(X, T, n_folds=4,
-                         structs=[
-                             [[[5, 3, 1]], []],           
-                            ],
-                          methods=['sgd'],
-                          epochs=[20],
-                          learning_rates=[0.01,0.05,0.1], #, 0.1],
-                          batch_sizes=[3])
-df
-
-
-# df = run_these_parameters(X, T, n_folds=4,
-#                          structs=[
-#                              [[[5, 3, 1]], []],           
-#                             ],
-#                           methods=['sgd'],
-#                           epochs=[20],
-#                           learning_rates=[0.01,0.05,0.1], #, 0.1],
-#                           batch_sizes=[3])
-# df
-
-# With   learning_rates=[0.01,0.05,0.1], the rate=0.01 performance best.
-# 
-
-# In[86]:
+   def terminal_state(self, state):
+       return False
+   def changeGoal(self,newgoal):
+       self.goal=newgoal
+       
+       
+       
+       
+def distances_to_goal(agent,goal):
+   n_steps_per_trial=200
+   xs = np.linspace(0, 10, 25)
+   d=[]
+   for x in xs:
+       s = [x, 0, goal]  # 0 velocity
+       x_trace = np.zeros((n_steps_per_trial, 3))
+       for step in range(n_steps_per_trial):
+           a = agent.epsilon_greedy(s, 0.0) # epsilon = 0
+           s = agent.environment.next_state(s, a)
+           x_trace[step, :] = s
+       lastPostion=x_trace[-1,0]
+       d.append(abs(lastPostion-goal))
+       print(f'distance={abs(lastPostion-goal)}\n')
+   return sum(d)/len(d)  # return average distance
 
 
-df = run_these_parameters(X, T, n_folds=4,
-                         structs=[
-                             [[[5, 3, 1]], []],           
-                            ],
-                          methods=['sgd'],
-                          epochs=[20],
-                          learning_rates=[0.01], #, 0.1],
-                          batch_sizes=[3,5,20,30])
-df
+# In[3]:
 
 
-# Tried batch_sizes=[3,5,20,30]), and looks like batch size=30 performs best.
-# This is due to when batch size is sufficiently large, the pattern difference between the train set and the test set are reduced. 
-# 
-# 
-# Do the parameter values you find that work best surprise you? Also discuss how well the validation and test accuracies equal each other.
-# 
-# The best parameter values I found out is  "
-#                          structs=[
-#                              [[[5, 3, 1]], []],           
-#                             ],
-#                           methods=['sgd'],
-#                           epochs=[20],
-#                           learning_rates=[0.01], #, 0.1],
-#                           batch_sizes=[30])
-# "
-# It does not surprise me. The validation and test accuracies are acceptablely close to each other.
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
 
-# df = run_these_parameters(X, T, n_folds=5,
-#                          structs=[
-#                              [ [], [] ],
-#                              [ [], [10] ],
-#                              [[[5, 3, 1]], []],
-#                              [[[20, 3, 2], [5, 3, 1]], [20]], 
-#                             ],
-#                           methods=['sgd','adam'],
-#                           epochs=[30],
-#                           learning_rates=[0.01,0.05,0.1], #, 0.1],
-#                           batch_sizes=[30])
-# 
-# 
-# df
+agent = Qnet(marble, hidden_layers=[10, 10],
+             X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+             Q_means=[-2], Q_stds=[1])
 
-# For each method, try various hidden layer structures, learning rates, and numbers of epochs. Use the validation percent accuracy to pick the best hidden layers, learning rates and numbers of epochs for each method. Report training, validation and test accuracy for your best validation results for each of the three methods.
-# 
-# For meshod adam, the best combination happen to be 
-# 
-#   structs=[
-#                            
-#                              [[[5, 3, 1]], []],
-#                               
-#                             ],
-#                            
-#                           epochs=[20],
-#                           learning_rates=[0.01],
-#                           batch_sizes=[30])
-# 
-# The accuracy is training=100.00	validation=90.5	test=87.5
-# 
-# For method sgd, the best combination happen to be 
-# 
-#   structs=[ [[[20, 3, 2], [5, 3, 1]], [20]] ],                   
-#                           epochs=[20],
-#                           learning_rates=[0.01],
-#                           batch_sizes=[30])
-# 
-# The accuracy is    training100	validation=92.5	test=85
-# 
-# 
+epsilon_trace, r_trace =  agent.train(n_trials=50, n_steps_per_trial=20, n_epochs=10,
+                                      method='sgd', learning_rate=0.01, gamma=0.9,
+                                      epsilon=1, final_epsilon=0.01,
+                                      trial_callback=plot_status)
+
+
+# In[55]:
+
+
+# running way too long
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+ 
+goals=[]
+distances=[]
+for goal in range(1,10):
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=[10, 10],
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+ 
+    epsilon_trace, r_trace =  agent.train(n_trials=300, n_steps_per_trial=200, n_epochs=100,
+                                          method='sgd', learning_rate=0.01, gamma=0.9,
+                                          epsilon=1, final_epsilon=0.01,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    goals.append(goal)
+    distances.append(d)
+
+    print(f'goal={goal}; distance={d}\n')
+plt.plot(goals,distances,'o-')
+plt.show()
+
+
+# In[41]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+n_trialsS=(30, 100, 150)
+ds=[]
+for n_trials in n_trialsS:  
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=[10, 10],
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+
+    epsilon_trace, r_trace =  agent.train(n_trials=n_trials, n_steps_per_trial=100, n_epochs=150,
+                                          method='sgd', learning_rate=0.01, gamma=0.9,
+                                          epsilon=1, final_epsilon=0.01,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    ds.append(d)
+
+for i in range(0,3):
+    print(f'n_trials={n_trialsS[i]}; distance={ds[i]}\n')
+
+
+# In[44]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+hidden_layersS=([0],[3,3],[7,7])
+ds=[]
+for hidden_layers in hidden_layersS:  
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=hidden_layers,
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+
+    epsilon_trace, r_trace =  agent.train(n_trials=150, n_steps_per_trial=200, n_epochs=150,
+                                          method='sgd', learning_rate=0.01, gamma=0.9,
+                                          epsilon=1, final_epsilon=0.01,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    ds.append(d)
+
+for i in range(0,3):
+    print(f'hidden_layers={hidden_layersS[i]}; distance={ds[i]}\n')
+
+
+# In[45]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+n_steps_per_trialS=(10, 50, 100)
+ds=[]
+for n_steps_per_trial in n_steps_per_trialS:  
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=[3, 3],
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+
+    epsilon_trace, r_trace =  agent.train(n_trials=150, n_steps_per_trial=n_steps_per_trial, n_epochs=150,
+                                          method='sgd', learning_rate=0.01, gamma=0.9,
+                                          epsilon=1, final_epsilon=0.01,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    ds.append(d)
+
+for i in range(0,3):
+    print(f'n_steps_per_trial={n_steps_per_trialS[i]}; distance={ds[i]}\n')
+
+
+# In[48]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+learning_rateS=(0.01, 0.02, 0.03)
+ds=[]
+for learning_rate in learning_rateS:  
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=[3, 3],
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+
+    epsilon_trace, r_trace =  agent.train(n_trials=150, n_steps_per_trial=50, n_epochs=50,
+                                          method='sgd', learning_rate=learning_rate, gamma=0.9,
+                                          epsilon=1, final_epsilon=0.01,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    ds.append(d)
+
+for i in range(0,3):
+    print(f'learning_rate={learning_rateS[i]}; distance={ds[i]}\n')
+
+
+# In[47]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+n_epochsS=(50,100,150)
+ds=[]
+for n_epochs in n_epochsS:  
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=[3, 3],
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+
+    epsilon_trace, r_trace =  agent.train(n_trials=150, n_steps_per_trial=100, n_epochs=n_epochs,
+                                          method='sgd', learning_rate=learning_rate, gamma=0.9,
+                                          epsilon=1, final_epsilon=0.01,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    ds.append(d)
+
+for i in range(0,3):
+    print(f'n_epochs={epsilonS[i]}; distance={ds[i]}\n')
+
+
+# In[50]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+final_epsilonS=(0.001,0.01,0.02)
+ds=[]
+for final_epsilon in final_epsilonS:  
+    marble.changeGoal(goal)
+    agent = Qnet(marble, hidden_layers=[3, 3],
+                 X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+                 Q_means=[-2], Q_stds=[1])
+
+    epsilon_trace, r_trace =  agent.train(n_trials=150, n_steps_per_trial=100, n_epochs=150,
+                                          method='sgd', learning_rate=learning_rate, gamma=0.9,
+                                          epsilon=1, final_epsilon=final_epsilon,
+                                          trial_callback=plot_status)
+    d=distances_to_goal(agent,goal)
+    ds.append(d)
+
+for i in range(0,3):
+    print(f'epsilon={epsilonS[i]}; distance={ds[i]}\n')
+
+
+# In[54]:
+
+
+marble = Marble_Variable_Goal(valid_actions=np.array([-1, 0, 1]))
+goal=5
+ 
+ds=[]
+ 
+marble.changeGoal(goal)
+agent = Qnet(marble, hidden_layers=[3, 3],
+             X_means=[5, 0, 5, 0], X_stds=[2, 2, 2, 0.8],
+             Q_means=[-2], Q_stds=[1])
+
+epsilon_trace, r_trace =  agent.train(n_trials=150, n_steps_per_trial=100, n_epochs=200,
+                                      method='sgd', learning_rate=learning_rate, gamma=0.9,
+                                      epsilon=1, final_epsilon=0.01,
+                                      trial_callback=plot_status)
+d=distances_to_goal(agent,goal)
+ds.append(d)
+
+
+# The optimal network hidden layer structure appears to be: [3,3]. In this problem, it looks like the linear model does not generate a good R and a good play strategy
+# The optimal number of n_trialsS is 150. In this problem, the larger the n_trialsS, the better result we can get.
+# The optimal number of n_steps_per_trial is 50. The conclusion is that the best n_steps_per_trial does not to be the largest. However, it must be noteted that the initial weights are randomly generated. Therefore, running the same code multiple times may give different results.
+# The optimal n_epochs is 150. This tells us that at iteration 150, the error is still desending. However, the code ran for too long so I choosed 150. increase n_epochs may give a better result.
+# The optimal learning rate is 0.02. When the learning rate  is too larger, the system is nnstable. when the learning rate  is too small, the converge rate can be imporved when a larger learning rate is given.
+# The optimal final epsilon value is 0.01. Too small is not good, neither as too large.
+#  
 
 # # Grading
 # 
-# (UPDATED Oct. 21, 9:35am, tolerance on accuracies is now larger) Download [A4grader.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A4grader.tar), extract `A4grader.py` before running the following cell.
+# Download [A5grader.tar](https://www.cs.colostate.edu/~anderson/cs545/notebooks/A5grader.tar) and extract `A5grader.py` before running the following cell
 
+# In[ ]:
+
+
+get_ipython().run_line_magic('run', '-i A5grader.py')
+
+
+# ## Extra Credit
 # 
-
-# In[116]:
-
-
-get_ipython().run_line_magic('run', '-i A4grader.py')
-
-
-# # Extra Credit
+# Receive 1 point of extra credit for each of these:
 # 
-# Repeat the above experiment using a convolutional neural network defined in `Pytorch`.  Implement this yourself by directly calling `torch.nn` functions.
+#    * Modify your solution to this assignment by creating and using a `Marble2D` class that simulates the marble moving in two-dimensions, on a plane.  Some of the current plots will not work for this case. Just show the ones that are still appropriate.
+#    * Experiment with seven valid actions rather than three.  How does this change the behavior of the controlled marble?
