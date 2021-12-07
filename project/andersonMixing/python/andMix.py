@@ -29,7 +29,9 @@ class andMix():
 		else:
 			print("And_chen failed after %d iterations :(  Try to increase max iteration allowed\n" % (maxIteration));
 	
-		x_old=X_end;
+		x_old=X_end
+		return x_old
+ 
 	
 	def mixing(self,F,n,x_old,tol,kGlobal,maxIteration,lmd_in,m_in):
 		lmd = lmd_in
@@ -42,7 +44,7 @@ class andMix():
 		err=1e99
 		U=1
 		error_s=np.zeros((maxIteration,1))
-		while (err>tol and kLocal+kGlobal-1<=maxIteration):
+		while (err>tol and kLocal+kGlobal-1<maxIteration):
 	
 			Y[:,kLocal] = F(X[:,kLocal]).ravel()
 			err=max(abs(Y[:,kLocal]))
@@ -106,6 +108,7 @@ class andMix():
 				lk = lmd
 	
 		X_end=X[:,kLocal]
+		return (X_end, kLocal)
  
 
 

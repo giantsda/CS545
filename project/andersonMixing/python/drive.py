@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import andMix
 
 
+global A
+n=6
+A=np.random.uniform(-1, 1, size=(n, n))
 def myfun(xin):
 	# out=np.zeros(shape=(1,1))
 	
@@ -14,14 +17,15 @@ def myfun(xin):
 	# out[0] = x*y*z-121.;
 	# out[1] = x*x+y*y-82;
 	# out[2] = x+y+z-5121;
-	out=(x-1)*(x-1)+(y-2)*(y-3)-5
-	return np.array([out,0])
+	out=A@xin
+	return out
  
 # x=np.zeros(shape=(3,1))
-x=np.array(np.mat('1;1.21113456'))
+x=np.random.uniform(-1, 1, size=(n,1))
 
 
 admix = andMix.andMix()
-admix.adm_chen (myfun, 2 , x, 1e-12, 50000,0.99,30);
+x_end=admix.adm_chen (myfun, n, x, 1e-12, 5000,0.99,10)
+print(x_end)
  
  

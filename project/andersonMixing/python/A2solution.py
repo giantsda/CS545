@@ -170,6 +170,7 @@ class NeuralNetwork():
 		T = (T - self.T_means) / self.T_stds
 		
 		self.X_std=X
+		self.T_std=T
 		# Instantiate Optimizers object by giving it vector of all weights
 		optimizer = opt.Optimizers(self.all_weights)
 
@@ -179,7 +180,7 @@ class NeuralNetwork():
 
 		if method == 'ADM':
 			admix = andMix.andMix()
-			admix.adm_chen (self.forward_ADM, self.all_weights.size, self.all_weights, 1e-12, 50000,0.99,30);
+			admix.adm_chen (self.forward_ADM, self.all_weights.size, self.all_weights, 1e-12, n_epochs,0.9999,3);
 		elif method == 'sgd':
 			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs,verbose=True)
 		elif method == 'adam':
@@ -209,10 +210,7 @@ class NeuralNetwork():
 # 		plt.pause(0.00000001)
 # 		plt.clf()
  
-		
-		
-		
-		
+ 
 		# Return neural network object to allow applying other methods
 		# after training, such as:    Y = nnet.train(X, T, 100, 0.01).use(X)
 
@@ -248,20 +246,12 @@ class NeuralNetwork():
 		self.Ys.append(X)
 
 	def forward_ADM(self, weights):
-		"""Calculate outputs of each layer given inputs in X
-		
-		Parameters
-		----------
-		X : input samples, standardized
-
-		Returns
-		-------
-		Outputs of all layers as list
-		"""
-		
- 
-		
 		X=self.X_std
+		T=self.T_std
+		if T.size>weights.size: #not sure if this will ever happen
+			weights=np.append(weights,np.zeros(shape=[T.size-weights.size,1]))
+			print("T.size is larger than weights.size. check how this happened")
+			error()
 		# unpack self.all_weights to self.Ws
 		i=0
 		for layerI in range(len(self.shapes)):
@@ -277,6 +267,16 @@ class NeuralNetwork():
 		X=self.addOnes(X)@self.Ws[-1]
 		self.Ys.append(X)
 		error = (T - self.Ys[-1]) * self.T_stds 
+		#	very possible that the x and f(x) are not with the same length. Need to fill them with zeros.
+		if error.size<weights.size:
+			error=np.append(error,np.zeros(shape=[weights.size-error.size,1]))
+			
+		plt.plot(self.Ys[-1], 'o-', label='Model ')
+		plt.plot(T, '*-', label='Train')
+
+		plt.draw()
+		plt.pause(0.00001)
+		plt.clf()
 		return error
 
 	# Function to be minimized by optimizer method, mean squared error
@@ -411,7 +411,7 @@ T = np.sin(X) * np.sin(X * 10)
 
 
 nnet = NeuralNetwork(X.shape[1], [11, 11], 1)
-nnet.train(X, T, 1000, method='ADM', learning_rate=None)
+nnet.train(X, T, 50, method='ADM', learning_rate=None)
 Y = nnet.use(X)
 
 exit()
