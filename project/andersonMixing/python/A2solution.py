@@ -21,6 +21,16 @@ from matplotlib.colors import LightSource
 import optimizers as opt
 import pandas  # for reading csv file
 import andMix
+from math import sqrt
+from numpy import asarray
+from numpy import arange
+from numpy.random import rand
+from numpy.random import seed
+from numpy import meshgrid
+from matplotlib import pyplot
+ 
+
+
 
 
 class NeuralNetwork():
@@ -177,22 +187,27 @@ class NeuralNetwork():
 		error_convert_f = lambda err: (np.sqrt(err) * self.T_stds)[0]
 		
 		# Call the requested optimizer method to train the weights.
-
-		if method == 'ADM':
-			admix = andMix.andMix()
-			admix.adm_chen (self.forward_ADM, self.all_weights.size, self.all_weights, 1e-12, n_epochs,0.9999,3);
+		
+		
+		
+		if method == 'adadelta':
+			solution=self.adadelta(self._forward,self.gradient_f,1000,0.999)
+		elif method == 'ADM':
+ 			admix = andMix.andMix()
+ 			admix.adm_chen (self.forward_ADM, self.all_weights.size, self.all_weights, 1e-12, n_epochs,0.9999,3);
 		elif method == 'sgd':
-			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs,verbose=True)
+ 			error_trace=optimizer.sgd(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs,verbose=True)
 		elif method == 'adam':
-			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs)
+ 			error_trace=optimizer.adam(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,learning_rate=learning_rate,n_epochs=n_epochs)
 		elif method == 'scg':
-			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)
+ 			error_trace=optimizer.scg(self.error_f, self.gradient_f,fargs=[X,T],error_convert_f=error_convert_f,n_epochs=n_epochs)
 		else:
-			raise Exception("method must be 'sgd', 'adam', or 'scg'")
- 
-    
-		self.total_epochs += len(error_trace)
-		self.error_trace += error_trace
+ 			raise Exception("method must be 'sgd', 'adam', or 'scg'")
+
+
+
+# 		self.total_epochs += len(error_trace)
+# 		self.error_trace += error_trace
 
 
 
@@ -218,7 +233,29 @@ class NeuralNetwork():
 
 	def addOnes(self,A):
 		return np.insert(A, 0, 1, axis=1)
-	
+
+	def adadelta(self, function, gradient, n_iter, rho):
+		# Based on https://d2l.ai/chapter_optimization/adadelta.html
+		ep=1e-5
+		solutions = list()
+		size=self.all_weights.size
+		solution = np.random.uniform(-1, 1, size=size)
+		St = np.zeros(shape=size)
+		delta = np.zeros(shape=size)
+		# Main loop
+		for it in range(n_iter):
+			dW = gradient(self.X_std, self.T_std).reshape(166,)
+			St=St* rho + (dW**2.0 * (1.0-rho))
+			rescaledGradient = np.sqrt(delta+ep)/np.sqrt(St+ep)*dW
+			solution = solution - rescaledGradient
+			delta=delta * rho + rescaledGradient**2.0 * (1.0-rho)
+			
+			self.all_weights=solution
+			solutions.append(solution)
+			error=self.error_f(self.X_std,self.T_std)
+# 			print('>%d f(%s) = %.5f' % (it, solution, function(solution[0], solution[1])))
+		return solutions
+
 	def _forward(self, X):
 		"""Calculate outputs of each layer given inputs in X
 		
@@ -410,14 +447,14 @@ T = np.sin(X) * np.sin(X * 10)
 
 
 
-nnet = NeuralNetwork(X.shape[1], [11, 11], 1)
-nnet.train(X, T, 50, method='ADM', learning_rate=None)
+nnet = NeuralNetwork(X.shape[1], [4,4,4], 1)
+nnet.train(X, T, 999, method='scg', learning_rate=0.999)
 Y = nnet.use(X)
 
 exit()
 
 errors = []
-n_epochs = 10000
+n_epochs = 1000
 method_rhos = [ ('adam', 0.01),
                 ('scg', None)]
 

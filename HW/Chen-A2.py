@@ -374,6 +374,10 @@ class NeuralNetwork():
 X = np.arange(-2, 2, 0.05).reshape(-1, 1)
 T = np.sin(X) * np.sin(X * 10)
 
+
+ 
+
+
 errors = []
 n_epochs = 10000
 method_rhos = [ ('adam', 0.01),
