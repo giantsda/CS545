@@ -17,9 +17,16 @@ class andMix():
 		Y = F(X_end)
 		err=max(abs(Y))
 		print('adm_chen:n=%d Before solving, error=%2.15f \n' % (n,err))
-	
+		error_trace = []
+		
+		
+		
+		
 		while (err>tol and kGlobal<=maxIteration):
-			[X_end, kLocal]=self.mixing(F,n,X_end,tol,kGlobal,maxIteration,lmd_in,m_in)
+			[X_end, kLocal, error]=self.mixing(F,n,X_end,tol,kGlobal,maxIteration,lmd_in,m_in)
+			error_trace.append(error)
+			
+			
 			kGlobal=kGlobal+kLocal
 			Y = F(X_end)
 			err=max(abs(Y))
@@ -30,7 +37,8 @@ class andMix():
 			print("And_chen failed after %d iterations :(  Try to increase max iteration allowed\n" % (maxIteration));
 	
 		x_old=X_end
-		return x_old
+		error_trace = [item for sublist in error_trace for item in sublist]
+		return error_trace
  
 	
 	def mixing(self,F,n,x_old,tol,kGlobal,maxIteration,lmd_in,m_in):
@@ -43,13 +51,13 @@ class andMix():
 		X[:,kLocal] = x_old.ravel()
 		err=1e99
 		U=1
-		error_s=np.zeros((maxIteration,1))
+		error=[]
 		while (err>tol and kLocal+kGlobal-1<maxIteration):
 	
 			Y[:,kLocal] = F(X[:,kLocal]).ravel()
 			err=max(abs(Y[:,kLocal]))
 			if (kLocal+kGlobal>=1):
-				error_s[kLocal+kGlobal-1]=err
+				error.append(err)
 			
 			if kLocal>0: # and (kLocal%10)==0):
 				print('adm iteration: %d,n=%d, lk=%e, error: %.14e\n' % (kGlobal+kLocal-1,n,lk,err))
@@ -59,7 +67,7 @@ class andMix():
 				X_end = X[:,kLocal]
 				print('*****And_chen: Solved equation successfully!*****\nThe solution is:\n');
 				print(X[:,kLocal])
-				return (X_end, kLocal)
+				return (X_end, kLocal, error)
 	
 			if (err > 1e7):
 				explode=1
@@ -86,7 +94,7 @@ class andMix():
 				else:
 					print("And_chen: Singular Matrix detected And_chen restarted!\n");
 					X_end=X[:,kLocal]
-					return (X_end, kLocal)
+					return (X_end, kLocal, error)
 	
 	# Calculate the next x^(k)
 			for i in range (n):
@@ -108,7 +116,7 @@ class andMix():
 				lk = lmd
 	
 		X_end=X[:,kLocal]
-		return (X_end, kLocal)
+		return (X_end, kLocal, error)
  
 
 
