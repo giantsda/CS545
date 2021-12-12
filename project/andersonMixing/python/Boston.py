@@ -235,11 +235,14 @@ class NeuralNetwork():
 
 
 		if (self.epoch % 100)==0:
-			plt.plot(self.Ys[-1], 'o-', label='Model ')
+			plt.plot(self.Ys[-1], 'o-', label='AdaDeltaCY')
 			plt.plot(self.T_std, '*-', label='Train')
-			plt.draw()
+# 			plt.draw()
+			plt.legend()
 			plt.pause(0.00001)
-			plt.clf()
+			plt.xlabel('x')
+			plt.ylabel('f(x)')
+# 			plt.clf()
 		self.epoch=self.epoch+1
 				
 		return mean_sq_error
@@ -411,9 +414,11 @@ class NeuralNetwork():
 		if error.size<weights.size:
 			error=np.append(error,np.zeros(shape=[weights.size-error.size,1]))
 			
-# 		plt.plot(self.Ys[-1], 'o-', label='Model ')
+# 		plt.plot(self.Ys[-1], 'o-', label='AM')
 # 		plt.plot(T, '*-', label='Train')
-
+# 		plt.legend()
+# 		plt.xlabel('x')
+# 		plt.ylabel('f(x)')
 # 		plt.draw()
 # 		plt.pause(0.00001)
 # 		plt.clf()
@@ -423,7 +428,7 @@ class NeuralNetwork():
 		return np.insert(A, 0, 1, axis=1)
 #%% main functions
 np.random.seed(1)
-
+fig=plt.figure()
 
 X = np.arange(-2, 2, 0.05).reshape(-1, 1)
 T = np.sin(X) * np.sin(X * 10)
@@ -431,11 +436,42 @@ T = np.sin(X) * np.sin(X * 10)
 
 
 nnet = NeuralNetwork(X.shape[1], [60,60], 1)
-nnet.train(X, T, 100, method='adm', learning_rate=0.99)
+nnet.train(X, T, 10000, method='adadeltaAdapt', learning_rate=0.99)
 Y = nnet.use(X)
 
+
+ 
+fig.savefig('Fig1.png',dpi=400)
+fig.show()
+
+
+
+
+
 plt.plot(nnet.error_trace, label='error')
+plt.xlabel('iterations')
+plt.ylabel('evaluation error')
+
+
+
+
+
 exit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
